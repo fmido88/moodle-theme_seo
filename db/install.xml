@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="theme/seo/db" VERSION="20250222" COMMENT="XMLDB file for Moodle theme/seo"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="theme_seo" COMMENT="hold informations about indexable paths including other optimizations parameters like keywords">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="page_path" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The page path relative to wwwroot without parameters"/>
+        <FIELD NAME="page_params" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Parameters like id saved as json"/>
+        <FIELD NAME="indexable" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="If this path or url is indexable or not"/>
+        <FIELD NAME="main_keyword" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="The main keyword for this url"/>
+        <FIELD NAME="sub_keywords" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Other keywords for this url joined by ','"/>
+        <FIELD NAME="overridekeys" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="2" SEQUENCE="false" COMMENT="Override behavior for keywords 0: no override 1: full override 2: add to keys"/>
+        <FIELD NAME="meta_description" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Add a meta description for the page"/>
+        <FIELD NAME="overridedesc" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="2" SEQUENCE="false" COMMENT="Override behaviour for description 0: no override (keep the original description if existed) 1: replace with this one 2: concatenate"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false" COMMENT="override the title of the page"/>
+        <FIELD NAME="overridetitle" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="2" SEQUENCE="false" COMMENT="Override the page title 0: override if not exist 1: replace (not recommended) 2: concatenate"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>

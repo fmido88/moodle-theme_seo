@@ -1,0 +1,110 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template theme_seo/seo-info
+
+    TODO describe template seo-info
+
+    Example context (json):
+    {
+    }
+}}
+<ul class="seo-info-scores">
+    <li><b>SEO Score: </b>{{seoscore}}</li>
+    <li><b>Word Count: </b>{{wordcount}}</li>
+    <li><b>Keyword SEO Score: </b>{{keywordseoscore}}</li>
+    <li><b>Keyword Density: </b>{{keyworddensity}}</li>
+    <li><b>Keyword Frequency: </b>{{keywordfrequency}}</li>
+</ul>
+<ul class="seo-info-meta">
+    <li><b>Page Title: </b>{{pagetitle}}</li>
+    <li><b>Meta Description: </b>{{metadescription}}</li>
+    <li><b>Meta Keyword: </b>{{keyword}}</li>
+    <li><b>Meta sub keywords: </b>{{subkeywords}}</li>
+</ul>
+<ul class="seo-info-title">
+    <li><b>Word count: </b>{{titlewordcount}}</li>
+    <li><b>Keyword with title: </b>
+        <ul>
+            <li><b>Keyword: {{titlekeyword}}</b></li>
+            <li>density: {{titlekeyworddensity}}</li>
+            <li>position: {{titlekeywordposition}}</li>
+        </ul>
+    </li>
+    <li><b>sub Keywords With Title: </b>
+        {{#subkeywordswithtitle}}
+        <ul>
+            <li><b>Keyword: {{keyword}}</b></li>
+            <li>density: {{density}}</li>
+            <li>position: {{position}}</li>
+        </ul>
+        {{/subkeywordswithtitle}}
+    </li>
+</ul>
+<ul class="seo-info-messages">
+    <h6>{{#str}} warnings, theme_seo {{/str}}</h6>
+    {{#warning}}
+    <li class="alert alert-danger">{{.}}</li>
+    {{/warning}}
+    <h6>{{#str}} goodpoints, theme_seo {{/str}}</h6>
+    {{#goodpoints}}
+    <li class="alert alert-success">{{.}}</li>
+    {{/goodpoints}}
+    <h6>{{#str}} minorwarnings, theme_seo {{/str}}</h6>
+    {{#minorwarnings}}
+    <li class="alert alert-warning">{{.}}</li>
+    {{/minorwarnings}}
+</ul>
+<ul class="seo-info-links">
+    <li><b>Total links: </b>{{totallinks}}</li>
+    <h6>{{#str}} internalLinks, theme_seo {{/str}}</h6>
+    <ul>
+        <li><b>Internal links: </b>{{internallinkscount}}</li>
+        <li><b>Unique internal links: </b>{{uniqueinternallinkscount}}
+            <ul>
+                {{#uniqueinternallinks}}
+                <li><a href="{{href}}">{{text}}</a></li>
+                {{/uniqueinternallinks}}
+            </ul>
+        </li>
+        <li><b>Duplicate internal links: </b>{{duplicateinternallinkscount}}
+            <ul>
+                {{#duplicateinternallinks}}
+                <li><a href="{{href}}">{{text}}</a></li>
+                {{/duplicateinternallinks}}
+            </ul>
+        </li>
+    </ul>
+    <h6>{{#str}} externalLinks, theme_seo {{/str}}</h6>
+    <ul>
+        <li><b>External links: </b>{{externallinkscount}}</li>
+        <li><b>Unique external links: </b>{{uniqueexternallinkscount}}
+            <ul>
+                {{#uniqueexternallinks}}
+                <li><a href="{{href}}">{{text}}</a></li>
+                {{/uniqueexternallinks}}
+            </ul>
+        </li>
+        <li><b>Duplicate external links: </b>{{duplicateexternallinkscount}}
+            <ul>
+                {{#duplicateexternallinks}}
+                <li><a href="{{href}}">{{text}}</a></li>
+                {{/duplicateexternallinks}}
+            </ul>
+        </li>
+    </ul>
+</ul>

@@ -1,0 +1,14 @@
+{
+    "name": "theme_seo",
+    "dependencies": {
+        "seord": "^0.0.5-patch.5"
+    },
+    "devDependencies": {
+        "@rollup/plugin-commonjs": "^28.0.2",
+        "@rollup/plugin-json": "^6.1.0",
+        "@rollup/plugin-node-resolve": "^16.0.0",
+        "@rollup/plugin-terser": "^0.4.4",
+        "rollup": "^4.34.8",
+        "rollup-plugin-polyfill-node": "^0.13.0"
+    }
+}
