@@ -455,7 +455,34 @@ class seo {
      * @return string
      */
     public function get_page_url_path(): string {
-        return $this->get_url()->get_path();
+        // This is a problem if the moodle installation is in sub-path.
+        // for example if the home page is like (http://example.com/moodle).
+        $path = $this->get_url()->get_path();
+
+        // Let's try to subtract the home path from it.
+        $homepath = (new moodle_url('/'))->get_path();
+        if (strlen($homepath) < 2) { // Usually '/'.
+            return $path;
+        }
+
+        if (!str_starts_with($homepath, '/')) {
+            $homepath = "/{$homepath}";
+        }
+
+        if (!str_ends_with($homepath, '/')) {
+            $homepath = "{$homepath}/";
+        }
+
+        if (!str_starts_with($path, '/')) {
+            $path = "/{$path}";
+        }
+
+        if (str_starts_with($path, $homepath)) {
+            return substr($path, strlen($homepath) - 1);
+        }
+
+        debugging("The homepage path: $homepath does not match the current page path $path", DEBUG_DEVELOPER);
+        return $path;
     }
 
     /**
@@ -542,7 +569,6 @@ class seo {
                 $jsargs = [
                     'public'     => $this->is_public_page(),
                     'redirected' => $this->is_redirected(),
-                    'url'        => $this->get_url()->out(false),
                 ];
                 $this->page->requires->js_call_amd('theme_seo/analyze', 'init', $jsargs);
             }
