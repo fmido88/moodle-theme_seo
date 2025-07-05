@@ -16,7 +16,8 @@
 /* eslint-disable no-console */
 
 /**
- * TODO describe module analyze
+ * Analyze the page content to calculate the SEO score and
+ * display the data and problems to the admin.
  *
  * @module     theme_seo/analyze
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
@@ -27,17 +28,10 @@ import SeoCheck from "theme_seo/seord";
 import $ from "jquery";
 import Templates from "core/templates";
 
-export const init = function(publicPage = true, redirected = false, pageUrl = '', keywords = []) {
+export const init = function(publicPage = true, redirected = false) {
     $(async function() {
-        let info = "Public: ";
-        info += publicPage ? "yes" : "no";
-        info += "\nRedirected: ";
-        info += redirected ? "yes" : "no";
-        info += "\nPage URL: ";
-        info += pageUrl;
-        console.log(info);
-
         let toogelTimeout;
+
         $('.seo-manager-footer__toggle').on('click', function() {
             clearTimeout(toogelTimeout);
             $('.seo-manager-footer__content').slideToggle();
@@ -47,17 +41,17 @@ export const init = function(publicPage = true, redirected = false, pageUrl = ''
                 $(this).html(isVisible ? '&times;' : '&#9650;');
             }, 500);
         });
+
         if (!publicPage || redirected) {
             return;
         }
 
-        if (keywords.length == 0) {
-            keywords = document.querySelector("meta[name='keywords']")?.content || "";
-            keywords = keywords.split(",").map((value) => value.trim());
-        }
+        let keywords = document.querySelector("meta[name='keywords']")?.content || "";
+        keywords = keywords.split(",").map((value) => value.trim());
 
         const contentJson = {
             title: document.title || "Untitled Page",
+            // Get the content appeared to the crawler.
             htmlText: $('[data-purpose="seo-page-content"]').html(),
             keyword: keywords.shift() ?? '',
             subKeywords: keywords,
@@ -72,40 +66,42 @@ export const init = function(publicPage = true, redirected = false, pageUrl = ''
         // Perform analysis
         let result = await checker.analyzeSeo();
 
-        // Log the SEO report
-        console.log("SEO Analysis Report:", result);
+        // Log the SEO report for debugging only.
+        // console.log("SEO Analysis Report:", result);
         // Display the SEO report
         let context = {
-            seoscore: result.seoScore,
-            wordcount: result.wordCount,
-            keywordseoscore: result.keywordSeoScore,
-            keyworddensity: result.keywordDensity,
-            keywordfrequency: result.keywordFrequency,
-            pagetitle: contentJson.title,
-            metadescription: contentJson.metaDescription,
-            keyword: contentJson.keyword,
-            subkeywords: contentJson.subKeywords.join(", "),
-            titlewordcount: result.titleSEO.wordCount,
-            titlekeyworddensity: result.titleSEO.keywordWithTitle.density,
-            titlekeywordposition: result.titleSEO.keywordWithTitle.position,
-            titlekeyword: result.titleSEO.keywordWithTitle.keyword,
-            subkeywordswithtitle: result.titleSEO.subKeywordsWithTitle,
-            warning: result.messages.warnings,
-            goodpoints: result.messages.goodPoints,
-            minorwarnings: result.messages.minorWarnings,
-            totallinks: result.totalLinks,
-            internallinkscount: result.internalLinks.all.length,
-            uniqueinternallinkscount: result.internalLinks.unique.length,
+            seoscore:                    result.seoScore,
+            wordcount:                   result.wordCount,
+            keywordseoscore:             result.keywordSeoScore,
+            keyworddensity:              result.keywordDensity,
+            keywordfrequency:            result.keywordFrequency,
+            pagetitle:                   contentJson.title,
+            metadescription:             contentJson.metaDescription,
+            keyword:                     contentJson.keyword,
+            subkeywords:                 contentJson.subKeywords.join(", "),
+            titlewordcount:              result.titleSEO.wordCount,
+            titlekeyworddensity:         result.titleSEO.keywordWithTitle.density,
+            titlekeywordposition:        result.titleSEO.keywordWithTitle.position,
+            titlekeyword:                result.titleSEO.keywordWithTitle.keyword,
+            subkeywordswithtitle:        result.titleSEO.subKeywordsWithTitle,
+            warning:                     result.messages.warnings,
+            goodpoints:                  result.messages.goodPoints,
+            minorwarnings:               result.messages.minorWarnings,
+            totallinks:                  result.totalLinks,
+            internallinkscount:          result.internalLinks.all.length,
+            uniqueinternallinkscount:    result.internalLinks.unique.length,
             duplicateinternallinkscount: result.internalLinks.duplicate.length,
-            uniqueinternallinks: result.internalLinks.unique,
-            duplicateinternallinks: result.internalLinks.duplicate,
-            externallinkscount: result.outboundLinks.all.length,
-            uniqueexternallinkscount: result.outboundLinks.unique.length,
+            uniqueinternallinks:         result.internalLinks.unique,
+            duplicateinternallinks:      result.internalLinks.duplicate,
+            externallinkscount:          result.outboundLinks.all.length,
+            uniqueexternallinkscount:    result.outboundLinks.unique.length,
             duplicateexternallinkscount: result.outboundLinks.duplicate.length,
-            uniqueexternallinks: result.outboundLinks.unique,
-            duplicateexternallinks: result.outboundLinks.duplicate,
+            uniqueexternallinks:         result.outboundLinks.unique,
+            duplicateexternallinks:      result.outboundLinks.duplicate,
         };
+
         let html = await Templates.render("theme_seo/seo-info", context);
+
         $('.seo-info-details').html(html);
     });
 };
