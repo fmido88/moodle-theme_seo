@@ -77,14 +77,14 @@
         <li><b>{{#str}} uniqueinternallinks, theme_seo {{/str}}: </b>{{uniqueinternallinkscount}}
             <ul>
                 {{#uniqueinternallinks}}
-                <li><a href="{{href}}">{{text}}</a></li>
+                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
                 {{/uniqueinternallinks}}
             </ul>
         </li>
         <li><b>{{#str}}duplicateinternallinks, theme_seo {{/str}}: </b>{{duplicateinternallinkscount}}
             <ul>
                 {{#duplicateinternallinks}}
-                <li><a href="{{href}}">{{text}}</a></li>
+                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
                 {{/duplicateinternallinks}}
             </ul>
         </li>
@@ -95,14 +95,14 @@
         <li><b>{{#str}} uniqueexternallinks, theme_seo {{/str}}: </b>{{uniqueexternallinkscount}}
             <ul>
                 {{#uniqueexternallinks}}
-                <li><a href="{{href}}">{{text}}</a></li>
+                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
                 {{/uniqueexternallinks}}
             </ul>
         </li>
         <li><b>{{#str}} duplicateexternallinks, theme_seo {{/str}}: </b>{{duplicateexternallinkscount}}
             <ul>
                 {{#duplicateexternallinks}}
-                <li><a href="{{href}}">{{text}}</a></li>
+                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
                 {{/duplicateexternallinks}}
             </ul>
         </li>
