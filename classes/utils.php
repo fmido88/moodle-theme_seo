@@ -29,6 +29,7 @@ class utils {
     /**
      * Strip links and escape html characters for a text.
      * @param string $text
+     * @param string $type
      * @param int $textformat -1 means that the text already formatted.
      * @return string
      */
@@ -49,15 +50,62 @@ class utils {
         }
         return s(strip_tags($text));
     }
+    /**
+     * Format strings to be suitable for being add inside meta tags.
+     * @param mixed $text
+     * @return string
+     */
     public static function format_string($text) {
         return self::format_text_for_meta($text, 'string');
     }
+    /**
+     * Get the page url path.
+     * @return string
+     */
     public static function get_page_url_path() {
-        global $PAGE, $CFG, $SITE, $FULLME;
+        global $PAGE, $FULLME;
         if ($PAGE->has_set_url()) {
             return $PAGE->url->get_path();
         }
         return (new moodle_url($FULLME))->get_path();
     }
-    
+
+    /**
+     * Get redirection url from page path.
+     * @param string $path
+     * @param array|string $params
+     * @return moodle_url
+     */
+    public static function get_url_from_path($path, $params = null) {
+        $homeurlpath = (new moodle_url('/'))->get_path(false);
+
+        if (!str_starts_with($path, '/')) {
+            $path = "/{$path}";
+        }
+
+        if (!str_starts_with($homeurlpath, '/')) {
+            $homeurlpath = "/{$homeurlpath}";
+        }
+
+        if (!str_ends_with($homeurlpath, '/')) {
+            $homeurlpath = "{$homeurlpath}/";
+        }
+
+        if (strlen($homeurlpath) > 1 && strpos($path, $homeurlpath) === 0) {
+            $path = substr($path, 1, strlen($homeurlpath) - 1);
+        }
+        if ($params && is_string($params)) {
+            if ($decoded = @json_decode($params, true)) {
+                $params = $decoded;
+            } else if (strpos($params, '=') !== false) {
+                if (!str_starts_with($params, '?')) {
+                    $params = "?{$params}";
+                }
+                $path = $params;
+                $params = null;
+            }
+        }
+
+        return new moodle_url($path, $params);
+    }
 }

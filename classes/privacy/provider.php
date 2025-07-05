@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Privacy provider
+ * Privacy provider.
  *
  * @package    theme_seo
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
@@ -25,14 +25,20 @@
 namespace theme_seo\privacy;
 
 /**
- * Privacy provider class
+ * Privacy provider class.
  *
  * @package    theme_seo
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {
-    public static function get_reason():string {
+    /**
+     * Get the language string identifier with the component's language
+     * file to explain why this plugin stores no data.
+     *
+     * @return string
+     */
+    public static function get_reason(): string {
         return 'privacy:metadata';
     }
 }

@@ -56,9 +56,9 @@
             <li><b>{{#redirected}}{{#str}} redirectionurl, theme_seo {{/str}}{{/redirected}}{{!
             }}{{^redirected}}{{#str}} pageurl, theme_seo{{/str}}{{/redirected}}: </b>{{!
             }}<a href="{{url}}">{{url}}</a></li>
-            <li><b>Context: </b>{{context}}</li>
-            <li><b>Context name: </b>{{contextname}}</li>
-            <li><b>Context instance id: </b>{{instanceid}}</li>
+            <li><b>{{#str}} context, theme_seo {{/str}}: </b>{{context}}</li>
+            <li><b>{{#str}} contextname, theme_seo {{/str}}: </b>{{contextname}}</li>
+            <li><b>{{#str}} contextinstanceid, theme_seo {{/str}}: </b>{{instanceid}}</li>
         </ul>
         <div class="seo-info-details">
         {{^crawlable}}

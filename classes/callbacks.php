@@ -27,6 +27,11 @@ use useragent_test;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class callbacks {
+    /**
+     * Disable error notice for theme_seo crawler.
+     * @param \core\hook\after_config $hook
+     * @return void
+     */
     public static function after_config(\core\hook\after_config $hook) {
         $useragent = core_useragent::get_user_agent_string();
         if (strstr($useragent, 'MoodleThemeSEO')) {

@@ -26,21 +26,24 @@ namespace theme_seo\output;
 
 use theme_boost\output\core_renderer as boost_renderer;
 use theme_seo\seo;
-use theme_seo\utils;
+
+defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->dirroot . "/theme/seo/locallib.php");
+require_once($CFG->dirroot . '/theme/seo/locallib.php');
 require_once("{$CFG->dirroot}/course/renderer.php");
 
-// Get the actual parent theme dynamically
+// Get the actual parent theme dynamically.
 $parentthemes = theme_seo_get_list_of_parents();
-$parentclass = \core\output\core_renderer::class;
+$parentclass  = \core\output\core_renderer::class;
 
 $parentclassexists = false;
+
 while (!empty($parentthemes) && !$parentclassexists) {
     $parenttheme = array_shift($parentthemes);
+
     if ($class = theme_seo_get_parent_theme_core_renderer($parenttheme)) {
-        $parentclass = $class;
+        $parentclass       = $class;
         $parentclassexists = true;
         break;
     }
@@ -55,10 +58,15 @@ if (!$parentclassexists) {
 
 class_alias($parentclass, __NAMESPACE__ . '\\theme_seo_parent_core_renderer');
 
-if (!class_exists(__NAMESPACE__ . "\\theme_seo_parent_core_renderer")) {
-    debugging('Class ' . __NAMESPACE__ . "\\theme_seo_parent_core_renderer not defined", DEBUG_DEVELOPER);
+if (!class_exists(__NAMESPACE__ . '\\theme_seo_parent_core_renderer')) {
+    debugging('Class ' . __NAMESPACE__ . '\\theme_seo_parent_core_renderer not defined', DEBUG_DEVELOPER);
+
     // This mainly for autocomplete and should never be reached.
-    class theme_seo_parent_core_renderer extends boost_renderer {}
+    /**
+     * {@inheritDoc}
+     */
+    class theme_seo_parent_core_renderer extends boost_renderer {
+    }
 }
 
 /**
@@ -66,23 +74,27 @@ if (!class_exists(__NAMESPACE__ . "\\theme_seo_parent_core_renderer")) {
  */
 class core_renderer extends theme_seo_parent_core_renderer {
     /**
-     * SEO helper class
+     * SEO helper class.
      * @var seo
      */
     public seo $seo;
+
     /**
      * Get the seo helper class.
      * @return seo
      */
     public function get_seo(): seo {
         global $FULLME;
+
         if (isset($this->seo)) {
             return $this->seo;
         }
-        $url = $this->page->has_set_url() ? $this->page->url : $FULLME;
+        $url       = $this->page->has_set_url() ? $this->page->url : $FULLME;
         $this->seo = seo::get($url, $this);
+
         return $this->seo;
     }
+
     /**
      * {@inheritDoc}
      * @return string
@@ -99,10 +111,11 @@ class core_renderer extends theme_seo_parent_core_renderer {
 
     /**
      * {@inheritDoc}
-     * if not found return the page heading or site name
+     * if not found return the page heading or site name.
      */
     public function page_title() {
         $pagetitle = parent::page_title();
+
         return $this->get_seo()->page_title($pagetitle);
     }
 
@@ -115,8 +128,9 @@ class core_renderer extends theme_seo_parent_core_renderer {
             return parent::footer();
         }
 
-        $manager = new manager_footer($this->get_seo());
+        $manager       = new manager_footer($this->get_seo());
         $managerfooter = $this->page->get_renderer('theme_seo')->render($manager);
+
         return $this->get_seo()->get_content_as_guest() . $managerfooter . parent::footer();
     }
 }

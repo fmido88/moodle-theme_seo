@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $callbacks = [
     [
-        'hook' => core\hook\after_config::class,
+        'hook'     => core\hook\after_config::class,
         'callback' => [theme_seo\callbacks::class, 'after_config'],
-    ]
+    ],
 ];

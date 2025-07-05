@@ -24,6 +24,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+// phpcs:disable moodle.Files.RequireLogin.Missing
 require_once('../../config.php');
 
 $useragent = core_useragent::get_user_agent_string();
@@ -60,14 +61,17 @@ foreach ($params as $key => $value) {
 $url->remove_all_params();
 $url->params($newparams);
 
+// The parameter ignore_seo_check is very important to not loop the page.
 $loginurl = new moodle_url(get_login_url(), ['ignore_seo_check' => true]);
 
 $fetchurlcontent = function ($url) {
     global $CFG;
     require_once("$CFG->dirroot/lib/filelib.php");
 
-    $url = new moodle_url($url);
+    $url        = new moodle_url($url);
     $ishomepage = $url->compare(new moodle_url('/'), URL_MATCH_BASE);
+
+    // Login the crawler as guest.
     if ((!isloggedin() || !isguestuser()) && !$ishomepage) {
         $user = get_complete_user_data('username', 'guest');
         complete_user_login($user);
@@ -78,6 +82,7 @@ $fetchurlcontent = function ($url) {
 
     $curl = new curl(['ignoresecurity' => true]);
     $curl->setopt(['CURLOPT_USERAGENT' => "$useragent MoodleThemeSEO/1.0.0"]);
+
     if (!$ishomepage) {
         $headers = [
             "Cookie: $sessioncookie",
@@ -144,7 +149,7 @@ if (!empty($content) && $content !== 'login page') {
     echo json_encode([
                         'status'         => 'accessible',
                         'error'          => false,
-                        'cleanedcontent' => $cleanedcontent, // I think we  should use this content for testing the seo of the page.
+                        'cleanedcontent' => $cleanedcontent, // I think we should use this content for testing the seo of the page.
                         'contenttext'    => $content,
                         'info'           => $info,
                     ]);

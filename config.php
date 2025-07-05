@@ -15,7 +15,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * SEO config.
+ * SEO theme config.
+ * No need for configurations as all taken from the parent theme.
  *
  * @package    theme_seo
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>

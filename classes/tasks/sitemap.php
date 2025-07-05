@@ -26,9 +26,18 @@ use theme_seo\generator;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sitemap extends \core\task\scheduled_task {
+    /**
+     * Get a descriptive name for the task (shown to admins).
+     *
+     * @return string
+     */
     public function get_name() {
-        return 'Sitemap generator';
+        return get_string('sitemap_generator_task', 'theme_seo');
     }
+    /**
+     * Execute the task.
+     * @return void
+     */
     public function execute() {
         $generator = new generator;
         $generator->generate_sitemap();

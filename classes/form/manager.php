@@ -22,22 +22,26 @@ defined('MOODLE_INTERNAL') || die();
 require_once("$CFG->libdir/formslib.php");
 
 /**
- * Class manager
+ * Class manager.
  *
  * @package    theme_seo
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class manager extends \moodleform {
-    protected function definition(){
+    /**
+     * Form definition.
+     * @return void
+     */
+    protected function definition() {
         $mform = $this->_form;
-        $data = $this->_customdata;
+        $data  = $this->_customdata;
 
         $overrideoptions = [
             seo::OVERRIDE_NOTEXIST => get_string('override_notexist', 'theme_seo'),
             seo::OVERRIDE_REPLACE  => get_string('override_replace', 'theme_seo'),
             seo::OVERRIDE_CONCAT   => get_string('override_concat', 'theme_seo'),
-        ]; 
+        ];
 
         $mform->addElement('checkbox', 'indexable', get_string('indexable', 'theme_seo'));
         $mform->setDefault('indexable', true);

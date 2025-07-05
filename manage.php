@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * TODO describe file manage
+ * Form to manage the page seo.
  *
  * @package    theme_seo
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
@@ -23,7 +23,7 @@
  */
 
 use theme_seo\form\manager;
-use theme_seo\seo;
+use theme_seo\utils;
 
 require('../../config.php');
 
@@ -34,7 +34,8 @@ if ($pageurl = optional_param('pageurl', null, PARAM_LOCALURL)) {
 } else {
     $path = required_param('page_path', PARAM_PATH);
     $paramsstring = required_param('page_params', PARAM_TEXT);
-    $pageurl = new moodle_url($path, json_decode($paramsstring, true));
+
+    $pageurl = utils::get_url_from_path($path, $paramsstring);
 }
 
 $url = new moodle_url('/theme/seo/manage.php', ['pageurl' => $pageurl->out(false)]);
@@ -71,6 +72,7 @@ if ($form->is_cancelled()) {
     } else {
         $DB->insert_record('theme_seo', $data);
     }
+
     redirect($pageurl);
 }
 

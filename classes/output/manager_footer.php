@@ -23,26 +23,54 @@ use moodle_url;
 use theme_seo\seo;
 
 /**
- * Class manager_footer
+ * Class manager_footer.
  *
  * @package    theme_seo
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class manager_footer implements renderable, templatable {
+    /**
+     * The seo class object.
+     * @var seo
+     */
     public seo $seo;
+
+    /**
+     * The current page object.
+     * @var moodle_page
+     */
     public moodle_page $page;
+
+    /**
+     * Footer SEO management widget for the current page.
+     * @param ?seo $seo
+     */
     public function __construct(?seo $seo = null) {
         global $OUTPUT, $FULLME;
+
         if ($seo === null) {
             $seo = seo::get($FULLME, $OUTPUT);
         }
 
         $this->page = $seo->page;
-        $this->seo = $seo;
+        $this->seo  = $seo;
     }
+
+    /**
+     * {@inheritDoc}
+     * @param \renderer_base $output
+     * @return array{context: string,
+     * contextname: string,
+     * indexable: bool,
+     * instanceid: int,
+     * managable: bool,
+     * managerurl: \core\url,
+     * public: bool,
+     * redirected: bool,
+     * url: moodle_url}
+     */
     public function export_for_template(\renderer_base $output) {
-        global $OUTPUT;
         $context = [
             'public'      => $this->seo->is_public_page(),
             'indexable'   => $this->seo->is_indexable(),

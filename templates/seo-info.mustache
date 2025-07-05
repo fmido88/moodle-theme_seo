@@ -17,40 +17,40 @@
 {{!
     @template theme_seo/seo-info
 
-    TODO describe template seo-info
+    Displaying SEO info for the current page.
 
     Example context (json):
     {
     }
 }}
 <ul class="seo-info-scores">
-    <li><b>SEO Score: </b>{{seoscore}}</li>
-    <li><b>Word Count: </b>{{wordcount}}</li>
-    <li><b>Keyword SEO Score: </b>{{keywordseoscore}}</li>
-    <li><b>Keyword Density: </b>{{keyworddensity}}</li>
-    <li><b>Keyword Frequency: </b>{{keywordfrequency}}</li>
+    <li><b>{{#str}} seoscore, theme_seo {{/str}}: </b>{{seoscore}}</li>
+    <li><b>{{#str}} wordcount, theme_seo {{/str}}: </b>{{wordcount}}</li>
+    <li><b>{{#str}} keywordseoscore, theme_seo {{/str}}: </b>{{keywordseoscore}}</li>
+    <li><b>{{#str}} keyworddensity, theme_seo {{/str}}: </b>{{keyworddensity}}</li>
+    <li><b>{{#str}} keywordfrequency, theme_seo {{/str}}: </b>{{keywordfrequency}}</li>
 </ul>
 <ul class="seo-info-meta">
-    <li><b>Page Title: </b>{{pagetitle}}</li>
-    <li><b>Meta Description: </b>{{metadescription}}</li>
-    <li><b>Meta Keyword: </b>{{keyword}}</li>
-    <li><b>Meta sub keywords: </b>{{subkeywords}}</li>
+    <li><b>{{#str}} pagetitle, theme_seo {{/str}}: </b>{{pagetitle}}</li>
+    <li><b>{{#str}} metadescription, theme_seo {{/str}}: </b>{{metadescription}}</li>
+    <li><b>{{#str}} metakeyword, theme_seo {{/str}}: </b>{{keyword}}</li>
+    <li><b>{{#str}} metasubkeywords, theme_seo {{/str}}: </b>{{subkeywords}}</li>
 </ul>
 <ul class="seo-info-title">
-    <li><b>Word count: </b>{{titlewordcount}}</li>
-    <li><b>Keyword with title: </b>
+    <li><b>{{#str}} wordcount, theme_seo {{/str}}: </b>{{titlewordcount}}</li>
+    <li><b>{{#str}} keywordwithtitle, theme_seo {{/str}}: </b>
         <ul>
-            <li><b>Keyword: {{titlekeyword}}</b></li>
-            <li>density: {{titlekeyworddensity}}</li>
-            <li>position: {{titlekeywordposition}}</li>
+            <li><b>{{#str}} keyword, theme_seo {{/str}}: {{titlekeyword}}</b></li>
+            <li>{{#str}} density, theme_seo {{/str}}: {{titlekeyworddensity}}</li>
+            <li>{{#str}} position, theme_seo {{/str}}: {{titlekeywordposition}}</li>
         </ul>
     </li>
-    <li><b>sub Keywords With Title: </b>
+    <li><b>{{#str}} subkeywordswithtitle, theme_seo {{/str}}: </b>
         {{#subkeywordswithtitle}}
         <ul>
-            <li><b>Keyword: {{keyword}}</b></li>
-            <li>density: {{density}}</li>
-            <li>position: {{position}}</li>
+            <li><b>{{#str}} keyword, theme_seo {{/str}}: {{keyword}}</b></li>
+            <li>{{#str}} density, theme_seo {{/str}}: {{density}}</li>
+            <li>{{#str}} position, theme_seo {{/str}}: {{position}}</li>
         </ul>
         {{/subkeywordswithtitle}}
     </li>
@@ -70,18 +70,18 @@
     {{/minorwarnings}}
 </ul>
 <ul class="seo-info-links">
-    <li><b>Total links: </b>{{totallinks}}</li>
+    <li><b>{{#str}} totallinks, theme_seo {{/str}}: </b>{{totallinks}}</li>
     <h6>{{#str}} internalLinks, theme_seo {{/str}}</h6>
     <ul>
-        <li><b>Internal links: </b>{{internallinkscount}}</li>
-        <li><b>Unique internal links: </b>{{uniqueinternallinkscount}}
+        <li><b>{{#str}} internallinks, theme_seo {{/str}}: </b>{{internallinkscount}}</li>
+        <li><b>{{#str}} uniqueinternallinks, theme_seo {{/str}}: </b>{{uniqueinternallinkscount}}
             <ul>
                 {{#uniqueinternallinks}}
                 <li><a href="{{href}}">{{text}}</a></li>
                 {{/uniqueinternallinks}}
             </ul>
         </li>
-        <li><b>Duplicate internal links: </b>{{duplicateinternallinkscount}}
+        <li><b>{{#str}}duplicateinternallinks, theme_seo {{/str}}: </b>{{duplicateinternallinkscount}}
             <ul>
                 {{#duplicateinternallinks}}
                 <li><a href="{{href}}">{{text}}</a></li>
@@ -91,15 +91,15 @@
     </ul>
     <h6>{{#str}} externalLinks, theme_seo {{/str}}</h6>
     <ul>
-        <li><b>External links: </b>{{externallinkscount}}</li>
-        <li><b>Unique external links: </b>{{uniqueexternallinkscount}}
+        <li><b>{{#str}} externallinks, theme_seo {{/str}}: </b>{{externallinkscount}}</li>
+        <li><b>{{#str}} uniqueexternallinks, theme_seo {{/str}}: </b>{{uniqueexternallinkscount}}
             <ul>
                 {{#uniqueexternallinks}}
                 <li><a href="{{href}}">{{text}}</a></li>
                 {{/uniqueexternallinks}}
             </ul>
         </li>
-        <li><b>Duplicate external links: </b>{{duplicateexternallinkscount}}
+        <li><b>{{#str}} duplicateexternallinks, theme_seo {{/str}}: </b>{{duplicateexternallinkscount}}
             <ul>
                 {{#duplicateexternallinks}}
                 <li><a href="{{href}}">{{text}}</a></li>
