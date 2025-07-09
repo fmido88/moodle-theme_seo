@@ -854,14 +854,16 @@ class seo {
             $instance = $DB->get_record($module->modname, ['id' => $module->instance], 'id, intro, introformat');
             // Todo: In case of forum discussion page, get the post content as description.
         } catch (\Throwable $e) {
-            echo '<pre>';
-            var_dump(get_exception_info($e));
-            echo '</pre>';
+            if (debugging('', DEBUG_DEVELOPER)) {
+                echo '<pre>';
+                var_dump(get_exception_info($e));
+                echo '</pre>';
+            }
 
             return;
         }
 
-        if ($instance) {
+        if (!empty($instance)) {
             $summary = utils::format_text_for_meta($instance->intro, 'text', $instance->introformat);
             $output .= $this->add_description($summary ?? '');
         }
