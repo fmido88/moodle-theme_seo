@@ -30,10 +30,10 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'theme_seo';
 
 // This is the version of the plugin.
-$plugin->version = 2025070500;
+$plugin->version = 2025070900;
 
 // This is the named version.
-$plugin->release = '1.1.0';
+$plugin->release = '1.1.1';
 
 // This is a stable release.
 $plugin->maturity = MATURITY_BETA;
