@@ -685,11 +685,11 @@ class seo {
             if (!empty($heading)) {
                 $keywords = array_merge(explode('|', $heading), $keywords);
             } else if (!empty($pagetitle)) {
-                $keywords[] = array_merge(explode('|', $pagetitle), $keywords);
+                $keywords = array_merge(explode('|', $pagetitle), $keywords);
             }
         }
 
-        $keywords = array_unique(array_filter(array_map('trim', array_merge($keywords, $tags))));
+        $keywords = array_unique(array_filter(array_map('trim', array_merge($keywords, $tags)))); // Got the exception here.
 
         if (count($keywords) < 9) {
             $keywords[] = utils::format_string($SITE->fullname);
