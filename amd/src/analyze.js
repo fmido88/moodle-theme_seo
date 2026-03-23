@@ -52,6 +52,7 @@ export const init = function(publicPage = true, redirected = false) {
         const contentJson = {
             title: document.title || "Untitled Page",
             // Get the content appeared to the crawler.
+            // Todo: Get the content by ajax.
             htmlText: $('[data-purpose="seo-page-content"]').html(),
             keyword: keywords.shift() ?? '',
             subKeywords: keywords,

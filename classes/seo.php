@@ -238,7 +238,8 @@ class seo {
      * @return void
      */
     public function update_cached(): void {
-        $key                = base64_encode($this->pageurl->out(false));
+        $key = base64_encode($this->pageurl->out(false));
+
         self::$cached[$key] = $this;
     }
 
@@ -344,6 +345,7 @@ class seo {
      * @return bool
      */
     public function is_public_page(): bool {
+        global $CFG;
         if (isset($this->ispublic)) {
             return $this->ispublic;
         }
@@ -357,7 +359,7 @@ class seo {
             return true;
         }
 
-        global $CFG;
+
         require_once("$CFG->libdir/filelib.php");
         $curl = new curl(['ignoresecurity' => true]);
         $curl->setopt(['CURLOPT_USERAGENT' => core_useragent::get_moodlebot_useragent() . ' (Moodle SEO)']);
@@ -498,7 +500,7 @@ class seo {
      * @return moodle_url
      */
     public function get_url(): moodle_url {
-        return ($this->redirect && !empty($this->redirecturl)) ? $this->redirecturl : $this->pageurl;
+        return ($this->is_redirected() && !empty($this->redirecturl)) ? $this->redirecturl : $this->pageurl;
     }
 
     /**
@@ -565,25 +567,21 @@ class seo {
                 return $output;
             }
 
-            if (is_siteadmin()) {
-                $jsargs = [
-                    'public'     => $this->is_public_page(),
-                    'redirected' => $this->is_redirected(),
-                ];
-                $this->page->requires->js_call_amd('theme_seo/analyze', 'init', $jsargs);
-            }
+            // if (is_siteadmin()) {
+            //     $jsargs = [
+            //         'public'     => $this->is_public_page(),
+            //         'redirected' => $this->is_redirected(),
+            //     ];
+            //     $this->page->requires->js_call_amd('theme_seo/analyze', 'init', $jsargs);
+            // }
 
-            if (self::is_testing() // During internal test for the publicity of the page.
-                || !$this->is_crawler_allowed() // If the page is not public so no need to add these meta tags
-                                                // where no crawlers are allowed.
-                || $this->is_redirected() // The page already redirected to another page for guests, no need too.
-            ) {
+            if (self::is_testing()) {
                 $this->metaadded = true;
 
                 return $output;
             }
 
-            $iscoursepage = in_array($pageurlpath, ['/course/view.php', '/enrol/index.php'])
+            $iscoursepage = \in_array($pageurlpath, ['/course/view.php', '/enrol/index.php'])
                             || $this->context->contextlevel == CONTEXT_COURSE;
 
             if ($iscoursepage && $this->context->contextlevel != CONTEXT_COURSE) {
@@ -611,8 +609,8 @@ class seo {
                 }
             } else if (strpos($pageurlpath, '/blog') === 0) {
                 $this->blog($output);
-            } else if (class_exists('\local_page\context\page')
-                       && $this->context->contextlevel == \local_page\context\page::LEVEL) {
+            } else if (class_exists('\local_pg\context\page')
+                       && $this->context->contextlevel == \local_pg\context\page::LEVEL) {
                 $this->page($output);
             }
 

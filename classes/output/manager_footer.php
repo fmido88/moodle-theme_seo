@@ -37,23 +37,16 @@ class manager_footer implements renderable, templatable {
     public seo $seo;
 
     /**
-     * The current page object.
-     * @var moodle_page
-     */
-    public moodle_page $page;
-
-    /**
      * Footer SEO management widget for the current page.
      * @param ?seo $seo
      */
     public function __construct(?seo $seo = null) {
-        global $OUTPUT, $FULLME;
+        global $OUTPUT;
 
         if ($seo === null) {
-            $seo = seo::get($FULLME, $OUTPUT);
+            $seo = seo::get(qualified_me(), $OUTPUT);
         }
 
-        $this->page = $seo->page;
         $this->seo  = $seo;
     }
 
@@ -76,7 +69,7 @@ class manager_footer implements renderable, templatable {
             'indexable'   => $this->seo->is_indexable(),
             'redirected'  => $this->seo->is_redirected(),
             'url'         => $this->seo->get_url(),
-            'managable'   => $this->seo->is_public_page() && !$this->seo->is_redirected(),
+            'managable'   => $this->seo->is_manageable(),
             'managerurl'  => new moodle_url('/theme/seo/manage.php', ['pageurl' => $this->seo->get_url()->out(false)]),
             'context'     => $this->seo->get_context()->get_level_name(),
             'contextname' => $this->seo->get_context()->get_context_name(),

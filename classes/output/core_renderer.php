@@ -101,6 +101,8 @@ class core_renderer extends theme_seo_parent_core_renderer {
      */
     public function standard_head_html() {
         $output = parent::standard_head_html();
+        $this->get_seo();
+
         // Remove the keywords meta tag to add it again.
         $output = preg_replace('/<meta\s+name\s*=\s*"keywords"\s*content\s*=\s*"[^"]*"\s*\/?>/i', '', $output);
         $output = preg_replace('/<meta\s+name\s*=\s*"description"\s*content\s*=\s*"[^"]*"\s*\/?>/i', '', $output);
@@ -117,20 +119,5 @@ class core_renderer extends theme_seo_parent_core_renderer {
         $pagetitle = parent::page_title();
 
         return $this->get_seo()->page_title($pagetitle);
-    }
-
-    /**
-     * {@inheritDoc}
-     * @return string
-     */
-    public function footer() {
-        if (!is_siteadmin()) {
-            return parent::footer();
-        }
-
-        $manager       = new manager_footer($this->get_seo());
-        $managerfooter = $this->page->get_renderer('theme_seo')->render($manager);
-
-        return $this->get_seo()->get_content_as_guest() . $managerfooter . parent::footer();
     }
 }
