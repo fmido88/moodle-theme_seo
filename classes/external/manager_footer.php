@@ -16,7 +16,12 @@
 
 namespace theme_seo\external;
 
+use core\context;
 use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_value;
+use moodle_url;
+use theme_seo\seo;
 
 /**
  * Class manager-footer
@@ -26,4 +31,59 @@ use core_external\external_api;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class manager_footer extends external_api {
+    /**
+     * Description for get_seo() parameters.
+     * @return external_function_parameters
+     */
+    public static function get_seo_parameters() {
+        return new external_function_parameters([
+            'url'       => new external_value(PARAM_LOCALURL),
+            'contextid' => new external_value(PARAM_INT),
+        ]);
+    }
+
+    /**
+     * Exports values regarding page information to render manager footer.
+     * @param string $url
+     * @param int $contextid
+     * @return array{
+     * context: string,
+     * contextname: string,
+     * indexable: bool,
+     * instanceid: int,
+     * managable: bool,
+     * managerurl: \core\url,
+     * public: bool,
+     * redirected: bool,
+     * url: moodle_url}|null
+     */
+    public static function get_seo(string $url, int $contextid) {
+        global $PAGE;
+        [
+            'url'       => $url,
+            'contextid' => $contextid,
+        ] = self::validate_parameters(self::get_seo_parameters(), compact('url', 'contextid'));
+
+        $context = context::instance_by_id($contextid);
+        self::validate_context($context);
+
+        $PAGE->set_url($url);
+
+        // Caches the seo data.
+        $seo = new seo($PAGE, new \core\url($url));
+        if (!is_siteadmin()) {
+            return null;
+        }
+
+        $managerfooter = new \theme_seo\output\manager_footer($seo);
+        return $managerfooter->export_for_template($PAGE->get_renderer('core'));
+    }
+
+    /**
+     * Returns description for get_seo()
+     * @return \core_external\external_single_structure
+     */
+    public static function get_seo_returns() {
+        return \theme_seo\output\manager_footer::export_external_parameters();
+    }
 }

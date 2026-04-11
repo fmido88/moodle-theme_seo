@@ -16,6 +16,7 @@
 
 namespace theme_seo;
 
+use DOMDocument;
 use moodle_url;
 use SimpleXMLElement;
 
@@ -33,9 +34,9 @@ class generator {
      * @param  SimpleXMLElement $xml
      * @return void
      */
-    protected function array_to_xml($data, &$xml) {
+    protected function array_to_xml(array $data, SimpleXMLElement &$xml) {
         foreach ($data as $key => $value) {
-            if ($key === '@attributes' && is_array($value)) {
+            if ($key === '@attributes' && \is_array($value)) {
                 foreach ($value as $attr => $attrvalue) {
                     $xml->addAttribute($attr, $attrvalue);
                 }
@@ -46,7 +47,7 @@ class generator {
                 $key = 'url'; // Ensuring valid XML tags.
             }
 
-            if (is_array($value)) {
+            if (\is_array($value)) {
                 $subnode = $xml->addChild($key);
                 $this->array_to_xml($value, $subnode);
             } else {
@@ -58,21 +59,25 @@ class generator {
     /**
      * Summary of format_url.
      * @param string|moodle_url $url
-     * @param int               $lastmodified
-     * @param string            $changefreq   daily, weekly, monthly or yearly
-     * @param float             $priority     [0 - 1]
+     * @param ?int              $lastmodified
+     * @param ?string           $changefreq   daily, weekly, monthly or yearly
+     * @param ?float            $priority     [0 - 1]
      * @param string            $type         type of the page: course, module, ..
      *
-     * @return array{changefreq: mixed, lastmod: string, loc: string, priority: mixed}
+     * @return ?array{changefreq: mixed, lastmod: string, loc: string, priority: mixed}
      */
     protected function format_url(
-        string|\moodle_url $url,
-        $lastmodified = null,
-        $changefreq = null,
-        $priority = null,
-        $type = 'course'
+        string|moodle_url $url,
+        ?int $lastmodified = null,
+        ?string $changefreq = null,
+        ?float $priority = null,
+        string $type = 'course'
     ) {
-        if ($url instanceof \moodle_url) {
+        if (!utils::validate_link($url)) {
+            return null;
+        }
+
+        if ($url instanceof moodle_url) {
             $url = $url->out(false);
         }
 
@@ -107,21 +112,14 @@ class generator {
      * @param  array       $urls
      * @return bool|string
      */
-    public function get_xml(array $urls) {
-        // Sitemap data.
-        $data = [
-            'urlset' => [
-                '@attributes' => ['xmlns' => 'http://www.sitemaps.org/schemas/sitemap/0.9'], // Namespace for sitemap.
-                'url'         => array_values($urls),
-            ],
-        ];
+    protected function get_xml(array $urls) {
 
-        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>');
+        $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>');
         $xml->addAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9'); // Add namespace.
-        $this->array_to_xml($data['urlset']['url'], $xml);
+        $this->array_to_xml(array_values(array_filter($urls)), $xml);
 
         // Format the XML.
-        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
 
         $dom->preserveWhiteSpace = false;
         $dom->formatOutput       = true;
@@ -133,9 +131,10 @@ class generator {
 
     /**
      * Generate the sitemap.
-     * @return void
+     * @param bool $contentonly
+     * @return string
      */
-    public function generate_sitemap(): void {
+    public function generate_sitemap(bool $contentonly = false): string {
         global $CFG, $DB;
 
         $urls = [];
@@ -167,21 +166,39 @@ class generator {
             $urls[] = $this->format_url($url, $category->timemodified, 'monthly', '0.5');
         }
 
-        // Custom static pages urls.
-        // Todo: to be added.
+        // Custom static pages and user defined urls.
+        $custompages = get_config('theme_seo', 'custompages');
+        // Todo: to be added into settings.php.
         if (!empty($custompages)) {
             $pages = explode("\n", $custompages);
 
-            foreach ($pages as $page) {
-                $page = clean_param($page, PARAM_SAFEPATH);
-
-                $url  = new moodle_url($page);
-                $file = "$CFG->dirroot/$page";
-
-                if (!file_exists($file)) {
+            foreach ($pages as $rawentry) {
+                if (empty(trim($rawentry ?? ''))) {
                     continue;
                 }
-                $urls[] = $this->format_url($url, filemtime("$file"), type: 'custom');
+
+                $page = clean_param($rawentry, PARAM_PATH) ?: clean_param($rawentry, PARAM_LOCALURL);
+
+                if (empty($page)) {
+                    continue;
+                }
+
+                $url  = new moodle_url($page);
+                if (!$url->is_local_url()) {
+                    continue;
+                }
+
+                $relativepath = utils::extract_url_path($url);
+                $file = "{$CFG->dirroot}{$relativepath}";
+
+                if (!utils::validate_link($url)) {
+                    // We should notify the admin about invalid link.
+                    continue;
+                }
+
+                $lastmodified = file_exists($file) ? filemtime($file) : null;
+
+                $urls[] = $this->format_url($url, $lastmodified, type: 'custom');
             }
         }
 
@@ -211,18 +228,30 @@ class generator {
         }
 
         $sitemap = $this->get_xml($urls);
-        file_put_contents("$CFG->dirroot/sitemap.xml", $sitemap);
-        // Ensure robots.txt exists and is updated with the sitemap location.
-        $this->update_robots_txt("$CFG->dirroot/sitemap.xml");
+        if (!$contentonly) {
+            file_put_contents("$CFG->dirroot/sitemap.xml", $sitemap);
+        }
+
+        return $sitemap;
+    }
+
+    /**
+     * Return the url to the sitemap.
+     * @return string
+     */
+    public static function get_site_map_url(): string {
+        global $CFG;
+        return "$CFG->wwwroot/sitemap.xml";
     }
 
     /**
      * Updated robots.txt file.
-     * @param  string $sitemapurl
-     * @return void
+     * @param bool $contentonly
+     * @return string
      */
-    private function update_robots_txt($sitemapurl) {
+    public static function update_robots_txt(bool $contentonly = false) {
         global $CFG;
+        $sitemapurl = self::get_site_map_url();
         $sitemapline = "Sitemap: $sitemapurl";
 
         $robotsfile = "$CFG->dirroot/robots.txt";
@@ -230,16 +259,15 @@ class generator {
         $defaultcontent = <<<EOT
 User-agent: *
 Disallow: /admin
-Disallow: /user
 
 $sitemapline
 EOT;
 
         // Check if robots.txt exists, create if not.
         if (!file_exists($robotsfile)) {
-            file_put_contents($robotsfile, $defaultcontent);
+            $contentonly || file_put_contents($robotsfile, $defaultcontent);
 
-            return;
+            return $defaultcontent;
         }
 
         $robotscontent = file_get_contents($robotsfile);
@@ -254,6 +282,7 @@ EOT;
         }
 
         // Write updated content back to robots.txt ...
-        file_put_contents($robotsfile, $robotscontent);
+        $contentonly || file_put_contents($robotsfile, $robotscontent);
+        return $robotscontent;
     }
 }

@@ -23,10 +23,11 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-
+$string['cachedef_seo'] = 'Page info';
 $string['choosereadme'] = 'Theme SEO used to enhance Search Engine Optimization for Moodle, it has no styles of its own so you must select a parent theme to use it.';
 $string['configtitle'] = 'SEO';
 $string['context'] = 'Context';
+$string['contextid'] = 'Context id';
 $string['contextinstanceid'] = 'Context instance id';
 $string['contextname'] = 'Context name';
 $string['density'] = 'Density';
@@ -36,6 +37,7 @@ $string['duplicateinternallinks'] = 'Duplicate internal links';
 $string['externalLinks'] = 'Outbound links';
 $string['externallinks'] = 'External links';
 $string['goodpoints'] = 'Good points';
+$string['guestpreviewpage'] = 'Preview page a guest';
 $string['indexable'] = 'Indexable';
 $string['internalLinks'] = 'Internal links';
 $string['internallinks'] = 'Internal links';

@@ -75,6 +75,8 @@ class manager extends \moodleform {
         $mform->setType('page_params', PARAM_TEXT);
         $mform->setDefault('page_params', $data['pageparams']);
 
+        // Todo: Add hidden context id as extra identifier.
+        // Todo: Add Schema markup as advanced option.
         $this->add_action_buttons();
     }
 }

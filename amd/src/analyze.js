@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/* eslint-disable no-console */
-
 /**
  * Analyze the page content to calculate the SEO score and
  * display the data and problems to the admin.
@@ -28,7 +26,7 @@ import SeoCheck from "theme_seo/seord";
 import $ from "jquery";
 import Templates from "core/templates";
 
-export const init = function(publicPage = true, redirected = false) {
+export const init = function(publicPage = true, redirected = false, publicContent = '', countrycode = null) {
     $(async function() {
         let toogelTimeout;
 
@@ -52,13 +50,12 @@ export const init = function(publicPage = true, redirected = false) {
         const contentJson = {
             title: document.title || "Untitled Page",
             // Get the content appeared to the crawler.
-            // Todo: Get the content by ajax.
-            htmlText: $('[data-purpose="seo-page-content"]').html(),
+            htmlText: publicContent ?? $('[data-purpose="seo-page-content"]').html(),
             keyword: keywords.shift() ?? '',
             subKeywords: keywords,
             metaDescription: document.querySelector("meta[name='description']")?.content || "",
             languageCode: M.cfg.language,
-            // countryCode: "us"
+            countryCode: countrycode ?? "us"
         };
 
         // Initialize SeoCheck with structured content
@@ -68,7 +65,11 @@ export const init = function(publicPage = true, redirected = false) {
         let result = await checker.analyzeSeo();
 
         // Log the SEO report for debugging only.
-        // console.log("SEO Analysis Report:", result);
+        if (window.M.developerdebug) {
+            // eslint-disable-next-line no-console
+            console.log(contentJson, "SEO Analysis Report:", result);
+        }
+
         // Display the SEO report
         let context = {
             seoscore:                    result.seoScore,

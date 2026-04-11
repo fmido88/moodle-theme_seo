@@ -14,33 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace theme_seo\tasks;
+namespace theme_seo\local\pagetypes;
 
-use theme_seo\generator;
+use theme_seo\seo;
 
 /**
- * Task to update site map and robots.txt.
+ * Class blog
  *
  * @package    theme_seo
- * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
+ * @copyright  2026 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class sitemap extends \core\task\scheduled_task {
-    /**
-     * Get a descriptive name for the task (shown to admins).
-     *
-     * @return string
-     */
-    public function get_name() {
-        return get_string('sitemap_generator_task', 'theme_seo');
+class blog extends base {
+    #[\Override()]
+    protected function description(): string {
+        // Todo: Get part of the blog post as description.
+        return '';
     }
-    /**
-     * Execute the task.
-     * @return void
-     */
-    public function execute() {
-        $generator = new generator;
-        $generator->generate_sitemap();
-        generator::update_robots_txt();
+    #[\Override()]
+    protected function schema_markup(): ?array {
+        // Todo: Add schema markup for blog post as article.
+        return null;
+    }
+    #[\Override()]
+    public static function is_this_type(seo $seo): bool {
+        $pageurlpath = $seo->get_page_url_path();
+        return strpos($pageurlpath, '/blog') === 0;
     }
 }

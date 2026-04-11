@@ -47,8 +47,10 @@ $title = get_string('seomanage', 'theme_seo');
 $PAGE->set_heading($title);
 $PAGE->set_title($title);
 
-$form = new manager(null, ['pagepath' => $pageurl->get_path(), 'pageparams' => json_encode($pageurl->params())]);
-if ($records = $DB->get_records('theme_seo', ['page_path' => $pageurl->get_path()])) {
+$pagepath = utils::extract_url_path($pageurl);
+
+$form = new manager(null, ['pagepath' => $pagepath, 'pageparams' => json_encode($pageurl->params())]);
+if ($records = $DB->get_records('theme_seo', ['page_path' => $pagepath])) {
     foreach ($records as $record) {
         if (!empty($record->page_params)) {
             $pageparams = array_map('trim', json_decode($record->page_params, true));

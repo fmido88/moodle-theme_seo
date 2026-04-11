@@ -16,8 +16,11 @@
 
 namespace theme_seo;
 
+use cache;
 use context;
 use core\output\renderer_base;
+use core_cache\cacheable_object_interface;
+use core_collator;
 use core_renderer;
 use core_useragent;
 use curl;
@@ -25,6 +28,7 @@ use html_writer;
 use moodle_page;
 use moodle_url;
 use stdClass;
+use theme_seo\local\pagetypes\base;
 
 /**
  * SEO main class to format meta tags, title and other SEO related elements
@@ -34,18 +38,12 @@ use stdClass;
  * @copyright  2025 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class seo {
+class seo implements cacheable_object_interface {
     /**
      * Moodle page instance.
      * @var moodle_page
      */
     public moodle_page $page;
-
-    /**
-     * Output renderer instance.
-     * @var core_renderer
-     */
-    protected renderer_base $output;
 
     /**
      * Current page url.
@@ -55,25 +53,27 @@ class seo {
 
     /**
      * SEO record for the current page.
-     * @var object{id:int,
-     *             page_path:string,
-     *             page_params:string,
-     *             title:string,
-     *             overridetitle:int,
-     *             meta_description:string,
-     *             overridedesc:int,
-     *             main_keyword:string,
-     *             sub_keywords:string,
-     *             overridekeys:int,
-     *             indexable:int|bool}
+     * @var object{
+     *      id:              int,
+     *      page_path:       string,
+     *      page_params:     string,
+     *      title:           string,
+     *      overridetitle:   int,
+     *      meta_description:string,
+     *      overridedesc:    int,
+     *      main_keyword:    string,
+     *      sub_keywords:    string,
+     *      overridekeys:    int,
+     *      indexable:       int|bool
+     * }
      */
     protected stdClass $record;
 
     /**
      * Is the page public or not.
-     * @var bool
+     * @var ?bool
      */
-    protected bool $ispublic;
+    protected ?bool $ispublic;
 
     /**
      * Is the page is indixable or not.
@@ -98,6 +98,18 @@ class seo {
      * @var array
      */
     protected array $keywords;
+
+    /**
+     * The schema markup as associative array.
+     * @var array
+     */
+    protected array $schemamarkup;
+
+    /**
+     * The page title.
+     * @var string
+     */
+    protected string $title;
 
     /**
      * Is the meta tags added to the page or not.
@@ -157,42 +169,53 @@ class seo {
      * The content of the page as appeared to the search engine (guests).
      * @var string
      */
-    protected $content = '';
+    protected string $content = '';
 
     /**
      * SEO constructor.
-     * @param  \renderer_base         $output
-     * @param  moodle_page|null       $page
-     * @param  string|moodle_url|null $pageurl
+     * @param moodle_page|null       $page
+     * @param string|moodle_url|null $pageurl
+     * @param ?stdClass               $cacheddata
      * @return void
      */
-    public function __construct(renderer_base $output, ?moodle_page $page = null, string|moodle_url|null $pageurl = null) {
-        global $FULLME, $PAGE, $DB;
+    public function __construct(
+        ?moodle_page $page = null,
+        string|moodle_url|null $pageurl = null,
+        ?stdClass $cacheddata = null,
+    ) {
+        global $PAGE, $DB;
 
-        $this->output = $output;
-        $this->page   = $page ?? @$this->output->get_page() ?? $PAGE;
+        $this->page = $page ?? $PAGE;
 
         $this->context = $this->page->context;
 
         if (empty($pageurl)) {
-            $pageurl = $this->page->has_set_url() ? $this->page->url : $FULLME;
+            $pageurl = $this->page->has_set_url() ? $this->page->url : qualified_me();
         }
 
         $this->pageurl = new moodle_url($pageurl);
 
         if (self::is_testing()) {
+            // Don't load cached data or perform another curl request
+            // during testing to avoid infinite loop.
             return;
         }
 
+        if (!empty($cacheddata)) {
+            foreach ($cacheddata as $key => $value) {
+                if (property_exists($this, $key)) {
+                    $this->$key = $value;
+                }
+            }
+        }
+
         try {
-            $this->ispublic = $this->is_public_page();
-            // About 3 seconds for homepage and 2 sec for other pages.
-            // It only affects admins.
+            $this->ispublic ??= $this->is_public_page();
         } catch (\Throwable $e) {
             if (error_reporting() >= DEBUG_ALL) {
-                $exception            = get_exception_info($e);
-                $exception->backtrace = format_backtrace($exception->backtrace);
-                $debug                = '';
+                $exception = get_exception_info($e);
+                $exception->backtrace = format_backtrace((array)($exception->backtrace));
+                $debug = '';
 
                 foreach ($exception as $key => $value) {
                     $debug .= "$key: $value<br>";
@@ -202,7 +225,73 @@ class seo {
         }
 
         $this->load_record();
-        $this->update_cached();
+        // Only update caches from the ajax request.
+        !AJAX_SCRIPT || $this->update_cached();
+    }
+
+    /**
+     * Prepare the class to cache.
+     * @return stdClass
+     */
+    public function prepare_to_cache() {
+        $data = new stdClass();
+        $data->ispublic = $this->is_public_page();
+        $data->redirect = $this->is_redirected();
+        $data->redirecturl = $this->redirecturl;
+        $data->indexable = $this->is_indexable();
+        $data->pageurl = $this->get_url()->out(false);
+
+        // For now we just store the main properties of the page to avoid testing the page through curl
+        // which delay the page loading significantly. Now the testing is through ajax only.
+        // Don't store content or curlinfo yet as it is only needed in testing the page which not use cache.
+
+        // Caching schema markup, description, keywords and record data.
+        $metaproperties = ['record', 'keywords', 'description', 'schemamarkup', 'title'];
+
+        foreach ($metaproperties as $property) {
+            if (isset($this->$property)) {
+                $data->$property = $this->$property;
+            }
+        }
+
+        $page = new stdClass();
+        $page->title = $this->page->title;
+        $page->heading = $this->page->heading;
+        $page->contextid = $this->get_context()->id;
+        $page->url = $this->page->has_set_url() ? $this->page->url->out(false) : null;
+        $page->pagetype = $this->page->pagetype;
+        $page->course = $this->page->course;
+
+        $data->page = $page;
+
+        return $data;
+    }
+
+    /**
+     * Restore the class from the cache.
+     * @param  stdClass $data
+     * @return seo
+     */
+    public static function wake_from_cache($data) {
+        $cachedpage = fullclone($data->page);
+        unset($data->page);
+
+        if (AJAX_SCRIPT) {
+            $page = new moodle_page();
+
+            $context = \core\context::instance_by_id($cachedpage->contextid);
+            $page->set_context($context);
+
+            foreach ($cachedpage as $key => $value) {
+                if (empty($value)) {
+                    continue;
+                }
+                $method = "set_{$key}";
+                $page->$method($value);
+            }
+        }
+
+        return new self($page ?? null, null, $data);
     }
 
     /**
@@ -216,19 +305,24 @@ class seo {
     /**
      * Get the SEO instance for the specified page.
      * @param  \moodle_url|string $url
-     * @param  ?renderer_base     $output
+     * @param  ?moodle_page       $page
      * @return seo
      */
-    public static function get(moodle_url|string $url, ?renderer_base $output = null): self {
-        global $OUTPUT;
+    public static function get(moodle_url|string $url, ?moodle_page $page = null): self {
         $url = new moodle_url($url);
-        $key = base64_encode($url->out(false));
+        $key = md5($url->out(false));
 
         if (isset(self::$cached[$key])) {
             return self::$cached[$key];
         }
 
-        $seo = new self($output ?? $OUTPUT, null, $url);
+        $cache = cache::make('theme_seo', 'seo');
+
+        if ($seo = $cache->get($key)) {
+            return $seo;
+        }
+
+        $seo = new self($page, $url);
 
         return $seo;
     }
@@ -238,9 +332,15 @@ class seo {
      * @return void
      */
     public function update_cached(): void {
-        $key = base64_encode($this->pageurl->out(false));
+        if ($this->ispublic === null) {
+            // Not loaded to be cached.
+            return;
+        }
+        $key = md5($this->get_url()->out(false));
 
         self::$cached[$key] = $this;
+        $cache = cache::make('theme_seo', 'seo');
+        $cache->set('seo', $this);
     }
 
     /**
@@ -269,10 +369,11 @@ class seo {
                 FROM {theme_seo} seo
                 WHERE $pagepathlike
                 ORDER BY seo.page_params ASC";
-        $pagepath  = $this->get_page_url_path();
+        $pagepath = $this->get_page_url_path();
+
         $urlparams = $this->get_url_params();
 
-        $params  = ['pagepath' => $DB->sql_like_escape($pagepath)];
+        $params = ['pagepath' => $DB->sql_like_escape($pagepath)];
         $records = $DB->get_records_sql($sql, $params);
 
         foreach ($records as $record) {
@@ -321,9 +422,9 @@ class seo {
         }
         // Check if indexing is disabled in the website.
         $allowindexing = $CFG->allowindexing ?? 0;
-        $loginpages    = ['login-index', 'login-signup'];
+        $loginpages = ['login-index', 'login-signup'];
 
-        if ($allowindexing == 2 || ($allowindexing == 0 && in_array($this->page->pagetype, $loginpages))) {
+        if ($allowindexing == 2 || ($allowindexing == 0 && \in_array($this->page->pagetype, $loginpages))) {
             $this->indexable = false;
 
             return false;
@@ -341,17 +442,81 @@ class seo {
     }
 
     /**
+     * Get the response that contains the page content as the crawler suppose
+     * to see it.
+     * @param  bool      $forpreview
+     * @return ?stdClass
+     */
+    public function get_crawler_page_content(bool $forpreview = false): ?stdClass {
+        global $CFG;
+        require_once("$CFG->libdir/filelib.php");
+        $curl = new curl(['ignoresecurity' => true]);
+        $curl->setopt(['CURLOPT_USERAGENT' => core_useragent::get_moodlebot_useragent() . ' (Moodle SEO)']);
+
+        $params = [
+            'url'     => $this->pageurl->out(false),
+            'preview' => $forpreview,
+            'debug'   => false,
+        ];
+
+        $rawresponse = $curl->post((new moodle_url('/theme/seo/testpage.php', $params))->out(false));
+        $curlerrno = $curl->get_errno();
+        $info = $curl->get_info();
+
+        if (!empty($curlerrno) || $info['http_code'] != 200) {
+            $this->ispublic = false;
+
+            return null;
+        }
+
+        if (!$response = json_decode($rawresponse)) {
+            // Wrong response and this may be internal error
+            // don't initialize $ispublic.
+            // Todo: debug this if happen.
+            $this->curlinfo = []; // Avoid endless loop.
+
+            return null;
+        }
+
+        $this->ispublic = !(bool)$response->error;
+
+        if (!$this->ispublic) {
+            return $response;
+        }
+
+        $this->curlinfo = $response->info;
+
+        $curlurl = new moodle_url($response->info->url);
+
+        if ($curlurl->compare($this->get_url(), URL_MATCH_BASE)) {
+            if (empty($response->info->redirect_url)) {
+                $this->redirect = false;
+            } else {
+                $this->redirect = true;
+                $this->redirecturl = new moodle_url($response->info->redirect_url);
+            }
+        } else {
+            $this->redirect = true;
+            $this->redirecturl = $curlurl;
+        }
+
+        $this->content = $response->cleanedcontent;
+
+        return $response;
+    }
+
+    /**
      * Check if the page is public or not.
      * @return bool
      */
-    public function is_public_page(): bool {
-        global $CFG;
+    public function is_public_page(): ?bool {
         if (isset($this->ispublic)) {
             return $this->ispublic;
         }
 
         if (self::is_testing()) {
-            return false;
+            // Already reached by test page.
+            return true;
         }
 
         if (!isloggedin() || isguestuser()) {
@@ -359,52 +524,14 @@ class seo {
             return true;
         }
 
-
-        require_once("$CFG->libdir/filelib.php");
-        $curl = new curl(['ignoresecurity' => true]);
-        $curl->setopt(['CURLOPT_USERAGENT' => core_useragent::get_moodlebot_useragent() . ' (Moodle SEO)']);
-
-        $params = [
-            'url' => $this->pageurl->out(false),
-        ];
-        $rawresponse = $curl->post(new moodle_url('/theme/seo/testpage.php', $params));
-        $curlerrno   = $curl->get_errno();
-        $info        = $curl->get_info();
-
-        if (!empty($curlerrno) || $info['http_code'] != 200) {
-            $this->ispublic = false;
-
-            return false;
+        if (!AJAX_SCRIPT) {
+            // Don't initialize properties unless this is Ajax.
+            return null;
         }
 
-        if (!$response = json_decode($rawresponse)) {
-            return false;
-        }
+        $this->get_crawler_page_content();
 
-        $public = !(bool)$response->error;
-
-        if (!$public) {
-            return $public;
-        }
-
-        $this->curlinfo = $response->info;
-        $curlurl        = new moodle_url($response->info->url);
-
-        if ($curlurl->compare($this->pageurl, URL_MATCH_BASE)) {
-            if (empty($response->info->redirect_url)) {
-                $this->redirect = false;
-            } else {
-                $this->redirect    = true;
-                $this->redirecturl = new moodle_url($response->info->redirect_url);
-            }
-        } else {
-            $this->redirect    = true;
-            $this->redirecturl = $curlurl;
-        }
-
-        $this->content = $response->cleanedcontent;
-
-        return $public;
+        return $this->ispublic;
     }
 
     /**
@@ -412,7 +539,14 @@ class seo {
      * @return \core\url
      */
     public function get_preview_url(): moodle_url {
-        return new moodle_url('/theme/seo/testpage.php', ['url' => $this->pageurl->out(false), 'preview' => true]);
+        return new moodle_url('/theme/seo/preview.php', [
+            'url'              => $this->get_url()->out(false),
+            'contextid'        => $this->get_context()->id,
+            'page[title]'      => $this->page->title,
+            'page[heading]'    => $this->page->heading,
+            'page[pagelayout]' => $this->page->pagelayout,
+            'page[pagetype]'   => $this->page->pagetype,
+        ]);
     }
 
     /**
@@ -427,12 +561,12 @@ class seo {
      * Check if the page is redirected for guests.
      * @return bool
      */
-    public function is_redirected(): bool {
-        if (!isset($this->curlinfo)) {
+    public function is_redirected(): ?bool {
+        if (!isset($this->curlinfo) && AJAX_SCRIPT) {
             $this->is_public_page();
         }
 
-        return $this->redirect;
+        return $this->redirect ?? null;
     }
 
     /**
@@ -459,32 +593,7 @@ class seo {
     public function get_page_url_path(): string {
         // This is a problem if the moodle installation is in sub-path.
         // for example if the home page is like (http://example.com/moodle).
-        $path = $this->get_url()->get_path();
-
-        // Let's try to subtract the home path from it.
-        $homepath = (new moodle_url('/'))->get_path();
-        if (strlen($homepath) < 2) { // Usually '/'.
-            return $path;
-        }
-
-        if (!str_starts_with($homepath, '/')) {
-            $homepath = "/{$homepath}";
-        }
-
-        if (!str_ends_with($homepath, '/')) {
-            $homepath = "{$homepath}/";
-        }
-
-        if (!str_starts_with($path, '/')) {
-            $path = "/{$path}";
-        }
-
-        if (str_starts_with($path, $homepath)) {
-            return substr($path, strlen($homepath) - 1);
-        }
-
-        debugging("The homepage path: $homepath does not match the current page path $path", DEBUG_DEVELOPER);
-        return $path;
+        return utils::extract_url_path($this->get_url());
     }
 
     /**
@@ -492,15 +601,30 @@ class seo {
      * @return array
      */
     public function get_url_params(): array {
-        return $this->get_url()->params();
+        $params = $this->get_url()->params();
+        core_collator::ksort($params);
+
+        return $params;
     }
 
     /**
      * Get the page url.
-     * @return moodle_url
+     * @return ?moodle_url
      */
-    public function get_url(): moodle_url {
-        return ($this->is_redirected() && !empty($this->redirecturl)) ? $this->redirecturl : $this->pageurl;
+    public function get_url(): ?moodle_url {
+        $url = ($this->is_redirected() && !empty($this->redirecturl)) ? $this->redirecturl : $this->pageurl;
+
+        if ($url === null) {
+            return $url;
+        }
+        $url = clone $url;
+        $params = $url->params();
+        $url->remove_all_params();
+        core_collator::ksort($params);
+
+        // Todo: we actully should exclude some non-important parameter like 'redirect'
+        // in the homepage and other to avoid multiple instances for the same page.
+        return new moodle_url($url, $params);
     }
 
     /**
@@ -508,8 +632,12 @@ class seo {
      * @param  string $original
      * @return string
      */
-    public function page_title($original = ''): string {
+    public function page_title(string $original = ''): string {
         global $SITE;
+
+        if (isset($this->title)) {
+            return $this->title;
+        }
 
         if (empty($original)) {
             $original = $this->page->title;
@@ -518,62 +646,82 @@ class seo {
         $hasrecordtitle = isset($this->record->overridetitle) && !empty($this->record->title);
 
         if ($hasrecordtitle) {
-            if ($this->record->overridetitle == self::OVERRIDE_REPLACE) {
-                return utils::format_string($this->record->title);
+            if ((int)($this->record->overridetitle) === self::OVERRIDE_REPLACE) {
+                $this->title = utils::shorten_text(utils::format_string($this->record->title));
+
+                return $this->title;
             }
         }
 
-        if (!empty($original) && str_word_count($original) > 5) {
+        if (!empty($original) && str_word_count($original) > 3) {
+            // Already had a title.
             $pagetitle = $original;
         } else {
-            if ($hasrecordtitle && $this->record->overridetitle == self::OVERRIDE_NOTEXIST) {
-                return utils::format_string($this->record->title);
+            if ($hasrecordtitle && (int)($this->record->overridetitle) === self::OVERRIDE_NOTEXIST) {
+                $this->title = utils::shorten_text(utils::format_string($this->record->title));
+
+                return $this->title;
             }
 
             $sitename = utils::format_string($SITE->fullname);
 
-            $heading = empty($original) ? ($this->page->heading ?? '') : $original;
+            $heading = empty($original) ? $this->page->heading : $original;
 
+            // Override title by heading and append sitename.
             if (!empty($heading)) {
-                $heading   = utils::format_string($heading);
+                $heading = utils::format_string($heading);
                 $pagetitle = "{$heading} | {$sitename}";
             } else {
                 $pagetitle = $sitename;
             }
         }
 
-        if ($hasrecordtitle && $this->record->overridetitle == self::OVERRIDE_CONCAT) {
+        if ($hasrecordtitle && (int)($this->record->overridetitle) === self::OVERRIDE_CONCAT) {
             $pagetitle .= ' ' . utils::format_string($this->record->title);
         }
 
-        return $pagetitle;
+        // Recommended charachters is 70.
+        $this->title = utils::shorten_text($pagetitle);
+
+        return $this->title;
+    }
+
+    /**
+     * Get the robots meta tag to be added.
+     * @return string
+     */
+    protected function get_robots_meta(): string {
+        $instructions = [];
+        $instructions[] = $this->is_indexable() ? 'index' : 'noindex';
+        $instructions[] = 'follow';
+        // Todo: add advanced options in the page settings to override the robots tag.
+        $content = implode(', ', $instructions);
+
+        return "<meta name=\"robots\" content=\"$content\" />";
     }
 
     /**
      * Get meta tags to be added to the html head.
+     * @param  mixed  $origdescritpion
+     * @param  mixed  $origkeywords
      * @return string
      */
-    public function pre_head_html(): string {
+    public function pre_head_html($origdescritpion = '', $origkeywords = ''): string {
         $output = '';
 
+        if ($this->metaadded) {
+            return $output;
+        }
+
         try {
-            $pageurlpath = $this->get_page_url_path();
+            $output .= $this->get_robots_meta();
 
             // If URL should not be indexed, add the noindex meta tag to page.
             if (!$this->is_indexable()) {
-                $output .= '<meta name="robots" content="noindex, follow" />';
                 $this->metaadded = true;
 
                 return $output;
             }
-
-            // if (is_siteadmin()) {
-            //     $jsargs = [
-            //         'public'     => $this->is_public_page(),
-            //         'redirected' => $this->is_redirected(),
-            //     ];
-            //     $this->page->requires->js_call_amd('theme_seo/analyze', 'init', $jsargs);
-            // }
 
             if (self::is_testing()) {
                 $this->metaadded = true;
@@ -581,80 +729,147 @@ class seo {
                 return $output;
             }
 
-            $iscoursepage = \in_array($pageurlpath, ['/course/view.php', '/enrol/index.php'])
-                            || $this->context->contextlevel == CONTEXT_COURSE;
+            if (!$this->is_loaded()) {
+                $this->load_keywords($origkeywords);
 
-            if ($iscoursepage && $this->context->contextlevel != CONTEXT_COURSE) {
-                $id = $this->get_url_params()['id'] ?? 0;
+                // Load schema markup and description according to page type.
+                $pagetype = base::get_page_type_class($this);
+                $pagetype->load($origdescritpion);
 
-                if ($id) {
-                    $this->context = \context_course::instance($id);
-                }
+                $this->update_cached();
             }
 
-            $this->add_keywords_meta($output);
-
-            if ($iscoursepage) {
-                $this->course($output);
-            } else if ($this->context->contextlevel == CONTEXT_COURSECAT) {
-                $this->coursecat($output);
-            } else if ($this->context->contextlevel == CONTEXT_MODULE) {
-                // Check if the module is a part of public course or in a homepage first.
-                $this->module($output);
-            } else if ($this->context->contextlevel == CONTEXT_USER) {
-                $profileuser = \core_user::get_user($this->context->instanceid);
-
-                if ($profileuser && user_can_view_profile($profileuser, $this->page->course ?? null, $this->context)) {
-                    $this->profile($output);
-                }
-            } else if (strpos($pageurlpath, '/blog') === 0) {
-                $this->blog($output);
-            } else if (class_exists('\local_pg\context\page')
-                       && $this->context->contextlevel == \local_pg\context\page::LEVEL) {
-                $this->page($output);
-            }
+            $output .= $this->get_keywords_meta();
+            $output .= $this->get_description_meta();
+            $output .= $this->get_schema_markup_tag();
 
             $this->metaadded = true;
         } catch (\Throwable $e) {
-            if (error_reporting() >= DEBUG_ALL) {
-                $exception            = get_exception_info($e);
-                $exception->backtrace = format_backtrace($exception->backtrace, true);
-                $debug                = '<pre>';
+            $exception = get_exception_info($e);
+            $exception->backtrace = format_backtrace($exception->backtrace, true);
+            $debug = '<pre>';
 
-                foreach ($exception as $key => $value) {
-                    $debug .= "$key: $value<br>\n";
-                }
-                $debug .= '</pre>';
-                debugging($debug, DEBUG_ALL);
+            foreach ($exception as $key => $value) {
+                $debug .= "$key: $value<br>\n";
             }
+            $debug .= '</pre>';
+            debugging($debug, DEBUG_ALL);
         }
 
         return $output;
+    }
+
+    /**
+     * Setter for markup schema.
+     * @param  array $schema
+     * @return void
+     */
+    public function set_schema_markup(array $schema): void {
+        $this->schemamarkup = $schema;
+    }
+
+    /**
+     * Return the meta tag of markup schema.
+     * @return string
+     */
+    protected function get_schema_markup_tag(): string {
+        if (empty($this->schemamarkup)) {
+            return '';
+        }
+
+        $schema = @json_encode($this->schemamarkup, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        if (empty($schema)) {
+            ob_start();
+            var_dump($this->schemamarkup);
+            $debug = ob_get_clean();
+            $debug .= json_last_error_msg();
+            debugging("The schema markup provided <pre>{$debug}</pre> is not valid", DEBUG_DEVELOPER);
+
+            return '';
+        }
+
+        return "<script type=\"application/ld+json\">$schema</script>\n";
+    }
+
+    /**
+     * Load the keywords.
+     * @param  array|string $default
+     * @return void
+     */
+    protected function load_keywords(array|string $default = ''): void {
+        $behaviour = (int)($this->record->overridekeys ?? self::OVERRIDE_CONCAT);
+        $storedkeys = $this->get_stored_keywords();
+
+        if (!empty($storedkeys) && $behaviour === self::OVERRIDE_REPLACE) {
+            $this->keywords = $storedkeys;
+
+            return;
+        }
+
+        $defaultkeys = $this->get_default_keywords();
+        $existedkeys = [];
+
+        if (!empty($default)) {
+            if (is_string($default)) {
+                $default = explode(',', $default);
+            }
+            $existedkeys = array_filter(array_map('trim', $default));
+        }
+
+        $keywords = array_unique(array_merge($existedkeys, $defaultkeys));
+
+        if ($behaviour === self::OVERRIDE_NOTEXIST && count($keywords) > 2) {
+            $this->keywords = $keywords;
+
+            return;
+        }
+
+        $this->keywords = array_unique(array_merge($keywords, $storedkeys));
     }
 
     /**
      * Add keywords meta tag to the page.
-     * @param  string $output
      * @return string
      */
-    private function add_keywords_meta(&$output = ''): string {
+    protected function get_keywords_meta(): string {
         $keywords = $this->get_keywords();
-        $output .= "<meta name='keywords' content='" . implode(', ', $keywords) . "'/>";
+        // Max recomended 10 keywords.
+        $keywords = array_slice($keywords, 0, 10);
+        $keywords = array_map([utils::class, 'minify_text'], $keywords);
 
-        return $output;
+        return "<meta name='keywords' content='" . implode(', ', $keywords) . "'/>";
     }
 
     /**
-     * Get the keywords for the page.
+     * Generate and return default keywords for this page
+     * check for tags in this context and parent contexts
+     * and the page title and header.
      * @return array
      */
-    public function get_keywords() {
-        global $SITE;
+    public function get_default_keywords() {
+        $tags = self::get_tags();
+        $keywords = [];
 
-        if (!empty($this->keywords)) {
-            return $this->keywords;
+        if (\count($tags) < 5) {
+            $pagetitle = $this->page->title;
+            $heading = $this->page->heading;
+
+            if (!empty($heading)) {
+                $keywords = array_merge(explode('|', $heading), $keywords);
+            } else if (!empty($pagetitle)) {
+                $keywords = array_merge(explode('|', $pagetitle), $keywords);
+            }
         }
 
+        return array_unique(array_filter(array_map('trim', \array_merge($keywords, $tags))));
+    }
+
+    /**
+     * Get the keywords stored in record.
+     * @return array
+     */
+    public function get_stored_keywords() {
         $keywords = [];
 
         if (isset($this->record->overridekeys)) {
@@ -664,40 +879,23 @@ class seo {
 
             if (!empty($this->record->sub_keywords)) {
                 $subkeywords = array_filter(array_map(utils::class . '::format_string', explode(',', $this->record->sub_keywords)));
-                $keywords    = array_unique(array_merge($keywords, $subkeywords));
-            }
-
-            if ($this->record->overridekeys == self::OVERRIDE_REPLACE) {
-                $this->keywords = $keywords;
-
-                return $keywords;
+                $keywords = array_unique(array_merge($keywords, $subkeywords));
             }
         }
-
-        $tags = self::get_tags();
-
-        if (count($tags) < 10) {
-            $pagetitle = $this->output->page_title();
-            $heading   = $this->page->heading;
-
-            if (!empty($heading)) {
-                $keywords = array_merge(explode('|', $heading), $keywords);
-            } else if (!empty($pagetitle)) {
-                $keywords = array_merge(explode('|', $pagetitle), $keywords);
-            }
-        }
-
-        $keywords = array_unique(array_filter(array_map('trim', array_merge($keywords, $tags)))); // Got the exception here.
-
-        if (count($keywords) < 9) {
-            $keywords[] = utils::format_string($SITE->fullname);
-            $keywords[] = utils::format_string($SITE->shortname);
-        }
-
-        $keywords       = array_unique(array_filter(array_map('trim', $keywords)));
-        $this->keywords = $keywords;
 
         return $keywords;
+    }
+
+    /**
+     * Get the keywords for the page.
+     * @return array
+     */
+    public function get_keywords() {
+        if (!empty($this->keywords)) {
+            return $this->keywords;
+        }
+
+        return [];
     }
 
     /**
@@ -710,9 +908,7 @@ class seo {
 
         // Add tags as keywords.
         if (!empty($this->context->id) && $this->context instanceof \core\context) {
-            $contextsids = array_map(function (\core\context $cont) {
-                return $cont->id;
-            }, $this->context->get_parent_contexts(true));
+            $contextsids = array_map(fn (\core\context $cont) => $cont->id, $this->context->get_parent_contexts(true));
             [$contextsql, $contextsqlparams] = $DB->get_in_or_equal($contextsids, SQL_PARAMS_NAMED);
 
             $subsql = "SELECT DISTINCT t.id
@@ -735,164 +931,55 @@ class seo {
     }
 
     /**
-     * Get the description for the page from the record.
-     * @param  string $original The original description.
-     * @return string
+     * Setter for page description.
+     * @param  string $generated
+     * @param  string $original
+     * @return void
      */
-    protected function add_description($original = '') {
-        $output      = '';
-        $description = '';
+    public function set_description(string $generated, string $original = ''): void {
+        $behaviour = (int)($this->record->overridedesc ?? self::OVERRIDE_CONCAT);
+        $stored = '';
 
         if (!empty($this->record->meta_description)) {
-            $description = $this->record->meta_description;
+            $stored = utils::format_text_for_meta($this->record->meta_description, 'text', FORMAT_MOODLE);
         }
 
-        $override = $this->record->overridedesc ?? -1;
+        $original = !empty($original) ? utils::format_text_for_meta($original, 'text', FORMAT_MOODLE) : '';
+        $generated = !empty($generated) ? utils::format_text_for_meta($generated) : '';
 
         $description = match(true) {
-            $override == self::OVERRIDE_NOTEXIST && empty($original)     => $description,
-            $override == self::OVERRIDE_REPLACE  && !empty($description) => $description,
-            $override == self::OVERRIDE_CONCAT                           => "$description $original",
-            default                                                      => $original,
+            $behaviour === self::OVERRIDE_NOTEXIST && !empty($original)   => $original,
+            $behaviour === self::OVERRIDE_NOTEXIST && !empty($generated)  => $generated,
+            $behaviour === self::OVERRIDE_REPLACE && !empty($stored)      => $stored,
+            $behaviour === self::OVERRIDE_CONCAT                          => implode(' ', [$original, $generated, $stored]),
+            default                                                       => $original ?: $generated,
         };
+        $this->description = $description;
+    }
+
+    /**
+     * Get the description meta tag for this page.
+     * @return string
+     */
+    protected function get_description_meta(): string {
+        $description = $this->description;
+        $tag = '';
 
         if (!empty($description)) {
             $description = utils::format_text_for_meta($description, 'text', FORMAT_HTML);
-            $output .= "<meta name='description' content='{$description}'>";
+            // Recommended 150 - 160 char.
+            $description = utils::shorten_text($description, 160);
+            $tag = "<meta name=\"description\" content=\"{$description}\">";
         }
 
-        return $output;
+        return $tag;
     }
 
     /**
-     * Add course schema markup to the page and desctiption.
-     * @param  string $output
-     * @return void
+     * Check if the description and keywords is loaded of not.
+     * @return bool
      */
-    private function course(&$output = '') {
-        global $COURSE, $CFG, $SITE;
-        $course = !empty($COURSE) ? fullclone($COURSE)
-                                    : (!empty($this->page->course) ? fullclone($this->page->course)
-                                    : @get_course($this->context->instanceid));
-
-        if ($course) {
-            $course  = new \core_course_list_element($course);
-            $helper  = new \coursecat_helper();
-            $summary = utils::format_text_for_meta($helper->get_course_formatted_summary($course));
-            $output .= $this->add_description($summary ?? '');
-
-            if ($course->id == SITEID) {
-                return;
-            }
-            // Course Schema Markup.
-            $courseschema = [
-                '@context'    => 'https://schema.org',
-                '@type'       => 'Course',
-                'name'        => utils::format_text_for_meta($course->get_formatted_fullname()),
-                'description' => $summary,
-                'provider'    => [
-                    '@type' => 'EducationalOrganization',
-                    'name'  => utils::format_string($SITE->fullname),
-                    'url'   => $CFG->wwwroot,
-                ],
-                'url'              => $this->page->url->out(false),
-                'courseMode'       => 'online',
-                'educationalLevel' => 'Intermediate',
-                'inLanguage'       => current_language(),
-            ];
-
-            // If the course has a start date.
-            if (!empty($course->startdate)) {
-                $courseschema['hasCourseInstance'] = [
-                    '@type'      => 'CourseInstance',
-                    'startDate'  => date('Y-m-d', $course->startdate),
-                    'courseMode' => 'online',
-                    'inLanguage' => current_language(),
-                ];
-            }
-
-            $output .= '<script type="application/ld+json">'
-                    . json_encode($courseschema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
-        }
-    }
-
-    /**
-     * Add course category schema markup to the page and desctiption.
-     * @param  string $output
-     * @return void
-     */
-    private function coursecat(&$output = '') {
-        $categoryid = $this->context->instanceid;
-        $category   = \core_course_category::get($categoryid, IGNORE_MISSING);
-        $cathelper  = new \coursecat_helper();
-
-        if ($category) {
-            $summary = utils::format_text_for_meta($cathelper->get_category_formatted_description($category));
-            $output .= $this->add_description($summary ?? '');
-            // Todo: Add schema markup for categories.
-        }
-    }
-
-    /**
-     * Add module desctiption meta tag from module intro.
-     * @param  string $output
-     * @return void
-     */
-    private function module(&$output = '') {
-        global $DB;
-        $moduleid = $this->context->instanceid;
-        $sql      = 'SELECT cm.id, cm.instance, m.name as modname
-                FROM {course_modules} cm
-                JOIN {modules} m ON cm.module = m.id
-                WHERE cm.id = :moduleid';
-        $params = ['moduleid' => $moduleid];
-
-        try {
-            $module   = $DB->get_record_sql($sql, $params);
-            $instance = $DB->get_record($module->modname, ['id' => $module->instance], 'id, intro, introformat');
-            // Todo: In case of forum discussion page, get the post content as description.
-        } catch (\Throwable $e) {
-            if (debugging('', DEBUG_DEVELOPER)) {
-                echo '<pre>';
-                var_dump(get_exception_info($e));
-                echo '</pre>';
-            }
-
-            return;
-        }
-
-        if (!empty($instance)) {
-            $summary = utils::format_text_for_meta($instance->intro, 'text', $instance->introformat);
-            $output .= $this->add_description($summary ?? '');
-        }
-    }
-
-    /**
-     * Handle blog pages meta tags and schema.
-     * @param  string $output
-     * @return void
-     */
-    private function blog(&$output = '') {
-        // Todo: Get part of the blog post as description.
-        // Todo: Add schema markup for blog post as article.
-    }
-
-    /**
-     * Handle public profiles pages.
-     * @param  string $output
-     * @return void
-     */
-    private function profile(&$output = '') {
-        // Todo: get user description as description.
-        // Todo Add schema markup as public figure or something like that.
-    }
-
-    /**
-     * Handle pages like in local_pg.
-     * @param  string $output
-     * @return void
-     */
-    private function page(&$output = '') {
-        // Todo add part of the page content as description.
+    protected function is_loaded(): bool {
+        return isset($this->description) && !empty($this->keywords);
     }
 }

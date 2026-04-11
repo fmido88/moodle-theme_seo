@@ -24,10 +24,10 @@
     }
 }}
 
-<div class="seo-manager-footer" style="background: lightgoldenrodyellow;{{!
+<div class="seo-manager-footer" style="background: #e9ebe4;{{!
     }}border-radius: 15px;{{!
     }}padding: 15px;{{!
-    }}max-height: 350px;{{!
+    }}max-height: 60%;{{!
     }}position: fixed;{{!
     }}bottom: 0;{{!
     }}right: 0;{{!
@@ -38,32 +38,75 @@
         }}background: none;{{!
         }}border: none;{{!
         }}cursor: pointer;">&#9650;</button>
-    <div class="seo-manager-footer__content" style="display:none;overflow-y: auto; max-height: 320px;margin: 10px 0 0 0;">
+    <div class="seo-manager-footer__content" style="display:none;overflow-y: auto; max-height: 32rem;margin: 10px 0 0 0;">
         <h4>{{#str}} seoinfo, theme_seo {{/str}}</h4>
         {{#managable}}
         <a href="{{managerurl}}">{{#str}} seomanage, theme_seo {{/str}}</a>
+        <br>
         {{/managable}}
-        <ul class="seo-info">
-            <li {{^public}}style="color: red;"{{/public}}>{{!
-            }}<b>{{#str}} public, theme_seo {{/str}}: </b>{{!
-            }} {{#public}}{{#str}}yes{{/str}}{{/public}}{{^public}}{{#str}}no{{/str}}{{/public}}</li>
-            <li {{^indexable}}style="color:red;"{{/indexable}}>{{!
-            }}<b>{{#str}} indexable, theme_seo {{/str}}: </b>{{!
-            }} {{#indexable}}{{#str}} yes{{/str}}{{/indexable}}{{^indexable}}{{#str}}no{{/str}}{{/indexable}}</li>
-            <li {{#redirected}}style="color:red;"{{/redirected}}>{{!
-            }}<b>{{#str}} redirected, theme_seo {{/str}}: </b>{{!
-            }} {{#redirected}}{{#str}}yes{{/str}}{{/redirected}}{{^redirected}}{{#str}}no{{/str}}{{/redirected}}</li>
-            <li><b>{{#redirected}}{{#str}} redirectionurl, theme_seo {{/str}}{{/redirected}}{{!
-            }}{{^redirected}}{{#str}} pageurl, theme_seo{{/str}}{{/redirected}}: </b>{{!
-            }}<a href="{{url}}">{{url}}</a></li>
-            <li><b>{{#str}} context, theme_seo {{/str}}: </b>{{context}}</li>
-            <li><b>{{#str}} contextname, theme_seo {{/str}}: </b>{{contextname}}</li>
-            <li><b>{{#str}} contextinstanceid, theme_seo {{/str}}: </b>{{instanceid}}</li>
+        <dl class="seo-info">
+            <dt {{^public}}style="color: red;"{{/public}}>
+                {{#str}} public, theme_seo {{/str}}:
+            </dt>
+            <dd {{^public}}style="color: red;"{{/public}}>
+                {{#public}}{{#str}}yes{{/str}}{{/public}}
+                {{^public}}{{#str}}no{{/str}}{{/public}}
+            </dd>
+
+            <dt {{^indexable}}style="color:red;"{{/indexable}}>
+                {{#str}} indexable, theme_seo {{/str}}:
+            </dt>
+            <dd {{^indexable}}style="color:red;"{{/indexable}}>
+                {{#indexable}}{{#str}} yes{{/str}}{{/indexable}}
+                {{^indexable}}{{#str}}no{{/str}}{{/indexable}}
+            </dd>
+
+            <dt {{#redirected}}style="color:red;"{{/redirected}}>
+                {{#str}} redirected, theme_seo {{/str}}:
+            </dt>
+            <dd {{#redirected}}style="color:red;"{{/redirected}}>
+                {{#redirected}}{{#str}}yes{{/str}}{{/redirected}}
+                {{^redirected}}{{#str}}no{{/str}}{{/redirected}}
+            </dd>
+
+            <dt>
+                {{#redirected}}{{#str}} redirectionurl, theme_seo {{/str}}{{/redirected}}
+                {{^redirected}}{{#str}} pageurl, theme_seo{{/str}}{{/redirected}}:
+            </dt>
+            <dd>
+                <a href="{{{url}}}">{{url}}</a><br>
+                <a href="{{{previewurl}}}" target="_blank">{{#str}} guestpreviewpage, theme_seo {{/str}}</a>
+            </dd>
+
+            <dt>
+                {{#str}} context, theme_seo {{/str}}:
+            </dt>
+            <dd>
+                {{context}}
+            </dd>
+            <dt>
+                {{#str}} contextid, theme_seo {{/str}}:
+            </dt>
+            <dd>
+                {{contextid}}
+            </dd>
+            <dt>
+                {{#str}} contextname, theme_seo {{/str}}:
+            </dt>
+            <dd>
+                {{contextname}}
+            </dd>
+            <dt>
+                {{#str}} contextinstanceid, theme_seo {{/str}}:
+            </dt>
+            <dd>
+                {{instanceid}}
+            </dd>
         </ul>
         <div class="seo-info-details">
-        {{^crawlable}}
-            {{#str}} nothingtodisplay {{/str}}
-        {{/crawlable}}
+            {{^crawlable}}
+                {{#str}} nothingtodisplay {{/str}}
+            {{/crawlable}}
         </div>
     </div>
 </div>

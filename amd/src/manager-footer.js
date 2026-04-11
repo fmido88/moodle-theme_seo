@@ -20,3 +20,39 @@
  * @copyright  2026 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+import Ajax from 'core/ajax';
+import $ from 'jquery';
+import Template from 'core/templates';
+import {init as analyzerInit} from './analyze';
+import {exception} from 'core/notification';
+
+export const init = function(contextId = null, countrycode = null) {
+    $(function() {
+        let returnData;
+        let requests = Ajax.call([{
+            methodname: 'theme_seo_manage',
+            args: {
+                "url": window.location.href,
+                "contextid": contextId ?? window.M.cfg.contextid
+            }
+        }]);
+
+        requests[0].then((data) => {
+            if (data === null) {
+                return ['', ''];
+            }
+            returnData = data;
+            return Template.render('theme_seo/manager_footer', data);
+        })
+        .then((html, js) => {
+            if (!returnData) {
+                return;
+            }
+            $('div[data-for="theme-seo-manager-place-holder"]').append(html);
+            Template.runTemplateJS(js);
+            analyzerInit(returnData.public, returnData.redirected, returnData.content, countrycode);
+            return;
+        })
+        .catch(exception);
+    });
+};

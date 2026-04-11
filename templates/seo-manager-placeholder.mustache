@@ -15,19 +15,12 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    @template theme_seo/head
+    @template theme_seo/seo-manager-placeholder
 
-    TODO describe template head
+    TODO describe template seo-manager-placeholder
 
     Example context (json):
     {
     }
 }}
-{{{ output.doctype }}}
-<html {{{ output.htmlattributes }}}>
-    <head>
-        <title>{{{ output.page_title }}}</title>
-        <link rel="shortcut icon" href="{{{ output.favicon }}}" />
-        {{{ output.standard_head_html }}}
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
+<div data-for="theme-seo-manager-place-holder" class="theme-seo-manager-container"></div>

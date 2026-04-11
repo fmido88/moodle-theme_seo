@@ -26,6 +26,7 @@ namespace theme_seo\output;
 
 use theme_boost\output\core_renderer as boost_renderer;
 use theme_seo\seo;
+use theme_seo\utils;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -90,7 +91,7 @@ class core_renderer extends theme_seo_parent_core_renderer {
             return $this->seo;
         }
         $url       = $this->page->has_set_url() ? $this->page->url : $FULLME;
-        $this->seo = seo::get($url, $this);
+        $this->seo = seo::get($url, $this->page);
 
         return $this->seo;
     }
@@ -100,24 +101,51 @@ class core_renderer extends theme_seo_parent_core_renderer {
      * @return string
      */
     public function standard_head_html() {
+
         $output = parent::standard_head_html();
-        $this->get_seo();
 
         // Remove the keywords meta tag to add it again.
-        $output = preg_replace('/<meta\s+name\s*=\s*"keywords"\s*content\s*=\s*"[^"]*"\s*\/?>/i', '', $output);
-        $output = preg_replace('/<meta\s+name\s*=\s*"description"\s*content\s*=\s*"[^"]*"\s*\/?>/i', '', $output);
-        $output = preg_replace('/<meta\s+name\s*=\s*"robots"\s*content\s*=\s*"[^"]*"\s*\/?>/i', '', $output);
+        $keywordsregex = '/<meta\s+name\s*=\s*"\s*keywords\s*"\s*content\s*=\s*"([^"]*)"\s*\/?>/i';
+        $descriptionregex = '/<meta\s+name\s*=\s*"description"\s*content\s*=\s*"([^"]*)"\s*\/?>/i';
+        $robotsregex = '/<meta\s+name\s*=\s*"robots"\s*content\s*=\s*"([^"]*)"\s*\/?>/i';
 
-        return $this->get_seo()->pre_head_html() . $output;
+        $origkeywords = $origdesc = '';
+        if (preg_match($descriptionregex, $output, $matches)) {
+            $origdesc = $matches[1] ?? '';
+        }
+        if (preg_match($keywordsregex, $output, $matches)) {
+            $origkeywords = $matches[1] ?? '';
+        }
+
+        $output = preg_replace($keywordsregex, '', $output);
+        $output = preg_replace($descriptionregex, '', $output);
+        $output = preg_replace($robotsregex, '', $output);
+
+        return $this->get_seo()->pre_head_html($origdesc, $origkeywords) . $output;
     }
 
     /**
      * {@inheritDoc}
-     * if not found return the page heading or site name.
+     * If not found return the page heading or site name.
      */
     public function page_title() {
         $pagetitle = parent::page_title();
 
         return $this->get_seo()->page_title($pagetitle);
+    }
+
+    #[\Override()]
+    public function standard_end_of_body_html() {
+        $this->page->requires->js_call_amd('theme_seo/manager-footer', 'init', [
+            'contextId' => $this->get_page()->context->id,
+            'countrycode' => utils::get_country(),
+        ]);
+
+        if (!is_siteadmin()) {
+            return parent::standard_end_of_body_html();
+        }
+
+        $placeholder = $this->render_from_template('theme_seo/seo-manager-placeholder', []);
+        return $placeholder . "\n" . parent::standard_end_of_body_html();
     }
 }

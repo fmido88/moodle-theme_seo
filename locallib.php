@@ -39,7 +39,7 @@ function theme_seo_get_parent_theme() {
 
     $parent = get_config('theme_seo', 'parent');
 
-    if ($parent && in_array($parent, $themes) && $parent != 'seo') {
+    if ($parent && in_array($parent, $themes) && $parent !== 'seo') {
         return $parent;
     } else if ($parent) {
         if ($parent == 'seo') {
@@ -65,7 +65,7 @@ function theme_seo_get_list_of_parents() {
  * @param  string      $parenttheme
  * @return string|null
  */
-function theme_seo_get_parent_theme_core_renderer($parenttheme) {
+function theme_seo_get_parent_theme_core_renderer(string $parenttheme): ?string {
     if ($parenttheme === 'boost') {
         return \theme_boost\output\core_renderer::class;
     }

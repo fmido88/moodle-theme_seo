@@ -29,7 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
-        'classname' => 'theme_seo\tasks\sitemap',
+        'classname' => theme_seo\tasks\sitemap::class,
         'blocking'  => 0,
         'minute'    => 0,
         'hour'      => 0,

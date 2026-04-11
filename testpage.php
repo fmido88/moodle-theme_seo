@@ -28,15 +28,21 @@
 require_once('../../config.php');
 
 $useragent = core_useragent::get_user_agent_string();
+$seocrawler = strstr($useragent, '(Moodle SEO)');
+$debug = !$seocrawler && optional_param('debug', false, PARAM_BOOL) && is_siteadmin();
+$preview = optional_param('preview', false, PARAM_BOOL);
 
-if (!strstr($useragent, '(Moodle SEO)')) {
+if (!$debug && !$seocrawler) {
     die();
 }
 
 $useragent = trim(str_replace('(Moodle SEO)', '', $useragent));
 
-if (isloggedin() && !isguestuser()) {
-    echo json_encode(['status' => 'Test page only work for guest user\'s to test robots crawlers', 'error' => true]);
+if (!$debug && isloggedin() && !isguestuser()) {
+    echo json_encode([
+        'status' => 'Test page only work for guest user\'s to test robots crawlers',
+        'error'  => true,
+        ]);
     die();
 }
 
@@ -51,11 +57,11 @@ $url = new moodle_url($originalurl, ($_GET ?? []) + ($_POST ?? []));
 $url->remove_params('url');
 $url->param('ignore_seo_check', true);
 
-$params    = $url->params();
+$params = $url->params();
 $newparams = [];
 
 foreach ($params as $key => $value) {
-    $key             = str_replace('amp;', '', $key);
+    $key = str_replace('amp;', '', $key);
     $newparams[$key] = $value;
 }
 $url->remove_all_params();
@@ -64,11 +70,16 @@ $url->params($newparams);
 // The parameter ignore_seo_check is very important to not loop the page.
 $loginurl = new moodle_url(get_login_url(), ['ignore_seo_check' => true]);
 
-$fetchurlcontent = function ($url) {
-    global $CFG;
+/**
+ * Local function to get the content of a page.
+ * @param string|moodle_url $url
+ * @return array<array|string>
+ */
+function theme_seo_fetch_url_content(string|moodle_url $url) {
+    global $CFG, $USER;
     require_once("$CFG->dirroot/lib/filelib.php");
 
-    $url        = new moodle_url($url);
+    $url = new moodle_url($url);
     $ishomepage = $url->compare(new moodle_url('/'), URL_MATCH_BASE);
 
     // Login the crawler as guest.
@@ -77,10 +88,12 @@ $fetchurlcontent = function ($url) {
         complete_user_login($user);
     }
 
+    // We need to restore the same session for the admin user in case
+    // of preview with the same sesskey.
     $sessioncookie = session_name() . '=' . session_id();
-    session_write_close();
+    \core\session\manager::write_close();
 
-    $curl = new curl(['ignoresecurity' => true]);
+    $curl = new curl(['ignoresecurity' => $url->is_local_url()]);
     $curl->setopt(['CURLOPT_USERAGENT' => "$useragent MoodleThemeSEO/1.0.0"]);
 
     if (!$ishomepage) {
@@ -91,66 +104,85 @@ $fetchurlcontent = function ($url) {
         $curl->setHeader($headers);
     }
 
-    $output  = $curl->get($url);
+    $output = $curl->get($url->out(false));
     $errorno = $curl->get_errno();
-    $info    = $curl->get_info();
+    $info = $curl->get_info();
 
-    if ($errorno) {
-        echo json_encode(['status' => $curl->error, 'error' => true]);
+    if ($errorno || $info['http_code'] != 200) {
+        echo json_encode([
+            'status' => $curl->error,
+            'error'  => true,
+            'info'   => $info,
+        ]);
         die();
     }
 
     return [$output, $info];
-};
+}
 
 try {
-    $filename       = $CFG->dirroot . $url->get_path();
+    $filename = $CFG->dirroot . $url->get_path();
     $errorreporting = error_reporting();
 
     error_reporting(DEBUG_NONE);
 
     ob_start();
 
-    [$output, $info] = $fetchurlcontent($url->out(false));
+    [$output, $info] = theme_seo_fetch_url_content($url->out(false));
 
     echo $output;
 
     $rawcontent = ob_get_clean();
 
-    if ($info['http_code'] != 200) {
-        echo json_encode(['status' => $info['http_code'], 'error' => true, 'info' => $info]);
-        die();
-    }
-
     $curlurl = !empty($info['redirect_url']) ? $info['redirect_url'] : $info['url'];
     $curlurl = new moodle_url($curlurl);
 
-    if (optional_param('preview', false, PARAM_BOOL)) {
-        echo s($rawcontent);
-        die;
-    }
+    if (!$preview) {
+        $cleanedcontent = clean_text($rawcontent, FORMAT_HTML);
+        $cleanedcontent = str_replace(["\x00", "\v", "\t", "\r"], '', $cleanedcontent);
 
-    $cleanedcontent = clean_text($rawcontent, FORMAT_HTML);
-    $content        = trim(strip_tags($cleanedcontent));
+        // Minify.
+        do {
+            $oldlength = strlen($cleanedcontent);
+            $cleanedcontent = str_replace(['  ', "\n\n", " \n", "\n "], [' ', "\n", "\n", "\n"], $cleanedcontent);
+            $newlength = strlen($cleanedcontent);
+        } while ($newlength !== $oldlength);
 
-    if (!$url->compare($loginurl, URL_MATCH_BASE)) {
-        if ($loginurl->compare($curlurl, URL_MATCH_BASE) || $curlurl->compare($loginurl, URL_MATCH_BASE)) {
-            $content = 'login page';
+        if ($debug) {
+            echo '<pre>';
+            p($cleanedcontent);
+            echo '</pre>';
+            die;
         }
+
+        $textcontent = trim(strip_tags($cleanedcontent));
+
+        if (!$url->compare($loginurl, URL_MATCH_BASE)) {
+            if ($loginurl->compare($curlurl, URL_MATCH_BASE) || $curlurl->compare($loginurl, URL_MATCH_BASE)) {
+                $textcontent = 'login page';
+            }
+        }
+    } else {
+        $cleanedcontent = $textcontent = 'preview';
     }
 
     error_reporting($errorreporting);
 } catch (Throwable $e) {
-    echo json_encode(['status' => $e->getMessage(), 'error' => true]);
+    echo json_encode([
+        'status' => $e->getMessage(),
+        'trace'  => $e->getTrace(),
+        'error'  => true,
+    ]);
     die();
 }
 
-if (!empty($content) && $content !== 'login page') {
+if (!empty($textcontent) && $textcontent !== 'login page') {
     echo json_encode([
                         'status'         => 'accessible',
                         'error'          => false,
-                        'cleanedcontent' => $cleanedcontent, // I think we should use this content for testing the seo of the page.
-                        'contenttext'    => $content,
+                        'cleanedcontent' => $cleanedcontent,
+                        'contenttext'    => $textcontent,
+                        'rawcontent'     => $preview ? $rawcontent : null,
                         'info'           => $info,
                     ]);
 } else if ($content == 'login page') {
