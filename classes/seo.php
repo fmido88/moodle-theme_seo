@@ -212,6 +212,9 @@ class seo implements cacheable_object_interface {
         try {
             $this->ispublic ??= $this->is_public_page();
         } catch (\Throwable $e) {
+            if (AJAX_SCRIPT) {
+                throw $e;
+            }
             if (error_reporting() >= DEBUG_ALL) {
                 $exception = get_exception_info($e);
                 $exception->backtrace = format_backtrace((array)($exception->backtrace));
@@ -474,7 +477,6 @@ class seo implements cacheable_object_interface {
             // don't initialize $ispublic.
             // Todo: debug this if happen.
             $this->curlinfo = []; // Avoid endless loop.
-
             return null;
         }
 

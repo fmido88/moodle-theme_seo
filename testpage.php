@@ -185,7 +185,7 @@ if (!empty($textcontent) && $textcontent !== 'login page') {
                         'rawcontent'     => $preview ? $rawcontent : null,
                         'info'           => $info,
                     ]);
-} else if ($content == 'login page') {
+} else if ($textcontent == 'login page') {
     echo json_encode(['status' => 'Required login', 'error' => true]);
 } else {
     echo json_encode(['status' => 'not accessible', 'error' => true]);
