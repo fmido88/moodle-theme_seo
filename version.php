@@ -30,16 +30,16 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'theme_seo';
 
 // This is the version of the plugin.
-$plugin->version = 2026040910;
+$plugin->version = 2026041100;
 
 // This is the named version.
-$plugin->release = '1.1.1';
+$plugin->release = '2.0.0';
 
 // This is a stable release.
 $plugin->maturity = MATURITY_BETA;
 
 // This is the version of Moodle this plugin requires.
-$plugin->requires = 2022112800;
+$plugin->requires = 2025041400;
 
 // This is a list of plugins, this plugin depends on (and their versions).
 $plugin->dependencies = [
