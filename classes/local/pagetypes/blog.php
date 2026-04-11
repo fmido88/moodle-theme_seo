@@ -16,7 +16,9 @@
 
 namespace theme_seo\local\pagetypes;
 
+use blog_entry;
 use theme_seo\seo;
+use theme_seo\utils;
 
 /**
  * Class blog
@@ -26,11 +28,46 @@ use theme_seo\seo;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class blog extends base {
+    protected ?blog_entry $entry;
+    /**
+     * Get post entry.
+     * @return blog_entry|null
+     */
+    protected function get_entry(): ?blog_entry {
+        global $DB, $CFG;
+        if (isset($this->entry)) {
+            return $this->entry;
+        }
+
+        $id = $this->seo->get_url_params()['id'] ?? 0;
+        if (!$id) {
+            return null;
+        }
+
+        if (!$DB->record_exists('post', ['id' => $id])) {
+            return null;
+        }
+
+        require_once("{$CFG->dirroot}/blog/locallib.php");
+        $this->entry = new blog_entry($id);
+        return $this->entry;
+    }
+
     #[\Override()]
     protected function description(): string {
-        // Todo: Get part of the blog post as description.
-        return '';
+        if (!$entry = $this->get_entry()) {
+            return '';
+        }
+        if ($entry->publishstate != 'public') {
+            return '';
+        }
+
+        $description = $entry->summary ?: $entry->content;
+        $format = !empty($entry->summary) ? $entry->summaryformat : $entry->format;
+
+        return utils::format_text_for_meta($description, 'text', $format);
     }
+
     #[\Override()]
     protected function schema_markup(): ?array {
         // Todo: Add schema markup for blog post as article.

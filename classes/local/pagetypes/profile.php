@@ -16,7 +16,9 @@
 
 namespace theme_seo\local\pagetypes;
 
+use stdClass;
 use theme_seo\seo;
+use theme_seo\utils;
 
 /**
  * Class profile
@@ -26,11 +28,27 @@ use theme_seo\seo;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class profile extends base {
+
+    /**
+     * Get the user.
+     * @return stdClass|false
+     */
+    protected function get_user(): stdClass|false {
+        global $DB;
+        $id = $this->seo->get_context()->instanceid;
+        $fields = ['id', 'description', 'descriptionformat', ...\core_user\fields::get_name_fields()];
+        return $DB->get_record('user', ['id' => $id], implode(', ', $fields));
+    }
+
     #[\Override()]
     protected function description(): string {
-        // Todo: get user description as description.
-        return '';
+        $user = $this->get_user();
+        if (!empty($user->description)) {
+            return utils::format_text_for_meta($user->description, 'text', $user->descriptionformat);
+        }
+        return utils::format_text_for_meta(fullname($user));
     }
+
     #[\Override()]
     protected function schema_markup(): ?array {
         // Todo Add schema markup as public figure or something like that.

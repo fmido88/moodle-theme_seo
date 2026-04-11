@@ -16,7 +16,9 @@
 
 namespace theme_seo\local\pagetypes;
 
+use local_pg\serve;
 use theme_seo\seo;
+use theme_seo\utils;
 
 /**
  * Class page
@@ -26,10 +28,31 @@ use theme_seo\seo;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class page extends base {
+    /**
+     * Get server class for page.
+     * @return serve
+     */
+    protected function get_page(): serve {
+        global $DB;
+        $params = $this->seo->get_url_params();
+        $id = $params['id'] ?? $params['page'] ?? null;
+        $shortname = $params['shortname'] ?? null;
+
+        if (!$id && $shortname) {
+            $id = $DB->get_field('local_pg_pages', 'id', ['shortname' => $shortname]);
+        }
+
+        return serve::make($id, true, $shortname);
+    }
     #[\Override()]
     protected function description(): string {
+        $serve = $this->get_page();
+        if (!$serve->page_exists() || !$serve->is_visible()) {
+            return '';
+        }
+        $content = $serve->get_formatted_content();
         // Todo add part of the page content as description.
-        return '';
+        return utils::format_text_for_meta($content);
     }
     #[\Override()]
     public static function is_this_type(seo $seo): bool {
