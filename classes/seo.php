@@ -298,6 +298,14 @@ class seo implements cacheable_object_interface {
     }
 
     /**
+     * Check if the page is belonging to seo theme which probably manage page.
+     * @return bool
+     */
+    public static function is_seo_page(): bool {
+        $path = utils::extract_url_path(qualified_me());
+        return strpos($path, '/theme/seo') === 0;
+    }
+    /**
      * Get the context of the page.
      * @return context
      */
@@ -352,7 +360,12 @@ class seo implements cacheable_object_interface {
      * @return void
      */
     public function set_context(context $context) {
+        $oldid = $this->context->id;
         $this->context = $context;
+        $newid = $this->context->id;
+        if ($oldid != $newid) {
+            $this->update_cached();
+        }
     }
 
     /**
@@ -771,6 +784,27 @@ class seo implements cacheable_object_interface {
     }
 
     /**
+     * Get the default generated markup schema for this page.
+     * This is tended to be used from outside the class only.
+     * @return false|string|null null if not exist and false for invalid schema
+     */
+    public function get_default_schema_markup(): string|false|null {
+        if (!isset($this->description)) {
+            // Load schema markup from a cloned instance to avoid messing with description.
+            $cloned = clone $this;
+
+            $pagetype = base::get_page_type_class($cloned);
+            $pagetype->load('');
+            return $cloned->get_default_schema_markup();
+        }
+
+        if (empty($this->schemamarkup)) {
+            return null;
+        }
+
+        return @json_encode($this->schemamarkup, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+    /**
      * Return the meta tag of markup schema.
      * @return string
      */
@@ -813,21 +847,21 @@ class seo implements cacheable_object_interface {
         $existedkeys = [];
 
         if (!empty($default)) {
-            if (is_string($default)) {
+            if (\is_string($default)) {
                 $default = explode(',', $default);
             }
             $existedkeys = array_filter(array_map('trim', $default));
         }
 
-        $keywords = array_unique(array_merge($existedkeys, $defaultkeys));
+        $keywords = array_unique([...$existedkeys, ...$defaultkeys]);
 
-        if ($behaviour === self::OVERRIDE_NOTEXIST && count($keywords) > 2) {
+        if ($behaviour === self::OVERRIDE_NOTEXIST && \count($keywords) > 2) {
             $this->keywords = $keywords;
 
             return;
         }
 
-        $this->keywords = array_unique(array_merge($keywords, $storedkeys));
+        $this->keywords = array_unique([...$storedkeys, ...$keywords]);
     }
 
     /**
@@ -837,7 +871,7 @@ class seo implements cacheable_object_interface {
     protected function get_keywords_meta(): string {
         $keywords = $this->get_keywords();
         // Max recomended 10 keywords.
-        $keywords = array_slice($keywords, 0, 10);
+        $keywords = \array_slice($keywords, 0, 10);
         $keywords = array_map([utils::class, 'minify_text'], $keywords);
 
         return "<meta name='keywords' content='" . implode(', ', $keywords) . "'/>";
@@ -858,13 +892,13 @@ class seo implements cacheable_object_interface {
             $heading = $this->page->heading;
 
             if (!empty($heading)) {
-                $keywords = array_merge(explode('|', $heading), $keywords);
+                $keywords = [...$keywords, ...explode('|', $heading)];
             } else if (!empty($pagetitle)) {
-                $keywords = array_merge(explode('|', $pagetitle), $keywords);
+                $keywords = [...$keywords, ...explode('|', $pagetitle)];
             }
         }
 
-        return array_unique(array_filter(array_map('trim', \array_merge($keywords, $tags))));
+        return array_unique(array_filter(array_map('trim', [...$keywords, ...$tags])));
     }
 
     /**
@@ -880,8 +914,8 @@ class seo implements cacheable_object_interface {
             }
 
             if (!empty($this->record->sub_keywords)) {
-                $subkeywords = array_filter(array_map(utils::class . '::format_string', explode(',', $this->record->sub_keywords)));
-                $keywords = array_unique(array_merge($keywords, $subkeywords));
+                $subkeywords = array_filter(array_map([utils::class, 'format_string'], explode(',', $this->record->sub_keywords)));
+                $keywords = array_unique([...$keywords, ...$subkeywords]);
             }
         }
 
@@ -894,7 +928,7 @@ class seo implements cacheable_object_interface {
      */
     public function get_keywords() {
         if (!empty($this->keywords)) {
-            return $this->keywords;
+            return array_unique(array_filter(array_map([utils::class, 'format_string'], $this->keywords)));
         }
 
         return [];
@@ -929,7 +963,7 @@ class seo implements cacheable_object_interface {
             }
         }
 
-        return $keywords;
+        return array_unique(array_filter($keywords));
     }
 
     /**

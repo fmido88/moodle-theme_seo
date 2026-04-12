@@ -16,6 +16,8 @@
 
 namespace theme_seo\form;
 
+use MoodleQuickForm;
+use MoodleQuickForm_textarea;
 use theme_seo\seo;
 
 defined('MOODLE_INTERNAL') || die();
@@ -64,6 +66,16 @@ class manager extends \moodleform {
 
         $mform->addElement('select', 'overridekeys', get_string('keywordsoverride', 'theme_seo'), $overrideoptions);
 
+        $mform->addElement('advcheckbox', 'insitemap', get_string('insitemap', 'theme_seo'));
+        $mform->setDefault('insitemap', 1);
+
+        $mform->addElement('textarea', 'schema_markup', get_string('schema_markup', 'theme_seo'));
+        $mform->setAdvanced('schema_markup', true);
+
+        if (!empty($data['schema_markup'])) {
+            $mform->setDefault('schema_markup', $data['schema_markup']);
+        }
+
         $mform->addElement('hidden', 'id');
         $mform->setType('id', PARAM_INT);
 
@@ -75,8 +87,22 @@ class manager extends \moodleform {
         $mform->setType('page_params', PARAM_TEXT);
         $mform->setDefault('page_params', $data['pageparams']);
 
-        // Todo: Add hidden context id as extra identifier.
-        // Todo: Add Schema markup as advanced option.
+        $mform->addElement('hidden', 'contextid');
+        $mform->setType('contextid', PARAM_INT);
+        $mform->setDefault('contextid', $data['contextid']);
+
         $this->add_action_buttons();
+    }
+
+    #[\Override()]
+    public function validation($data, $files) {
+        $errors = parent::validation($data, $files);
+        if (!empty($data['schema_markup'])) {
+            $schema = @json_encode($data['schema_markup']);
+            if (empty($schema)) {
+                $errors['schema_markup'] = json_last_error_msg();
+            }
+        }
+        return $errors;
     }
 }

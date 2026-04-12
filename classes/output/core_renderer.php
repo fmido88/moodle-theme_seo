@@ -80,17 +80,19 @@ class core_renderer extends theme_seo_parent_core_renderer {
      */
     public seo $seo;
 
+    public static $callinc = 0;
+
     /**
      * Get the seo helper class.
      * @return seo
      */
     public function get_seo(): seo {
-        global $FULLME;
 
         if (isset($this->seo)) {
             return $this->seo;
         }
-        $url       = $this->page->has_set_url() ? $this->page->url : $FULLME;
+
+        $url = $this->page->has_set_url() ? $this->page->url : qualified_me();
         $this->seo = seo::get($url, $this->page);
 
         return $this->seo;
@@ -101,7 +103,6 @@ class core_renderer extends theme_seo_parent_core_renderer {
      * @return string
      */
     public function standard_head_html() {
-
         $output = parent::standard_head_html();
 
         // Remove the keywords meta tag to add it again.
@@ -135,17 +136,23 @@ class core_renderer extends theme_seo_parent_core_renderer {
     }
 
     #[\Override()]
-    public function standard_end_of_body_html() {
+    public function footer() {
+
+        if (seo::is_seo_page() || seo::is_testing()) {
+            return parent::footer();
+        }
+
         $this->page->requires->js_call_amd('theme_seo/manager-footer', 'init', [
-            'contextId' => $this->get_page()->context->id,
+            'contextId'   => $this->get_seo()->get_context()->id,
             'countrycode' => utils::get_country(),
         ]);
 
         if (!is_siteadmin()) {
-            return parent::standard_end_of_body_html();
+            return parent::footer();
         }
 
         $placeholder = $this->render_from_template('theme_seo/seo-manager-placeholder', []);
-        return $placeholder . "\n" . parent::standard_end_of_body_html();
+
+        return parent::footer() . "\n" . $placeholder;
     }
 }

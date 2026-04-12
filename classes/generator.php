@@ -71,7 +71,7 @@ class generator {
         ?int $lastmodified = null,
         ?string $changefreq = null,
         ?float $priority = null,
-        string $type = 'course'
+        string $type = 'custom'
     ) {
         if (!utils::validate_link($url)) {
             return null;
@@ -99,6 +99,9 @@ class generator {
             $priority = '0.5';
         }
 
+        // Google ignores <priority> and <changefreq> values.
+        // Google uses the <lastmod> value if it's consistently and
+        // verifiably (for example by comparing to the last modification of the page) accurate.
         return [
             'loc'        => $url,
             'lastmod'    => date('Y-m-d', $lastmodified),
@@ -137,6 +140,8 @@ class generator {
     public function generate_sitemap(bool $contentonly = false): string {
         global $CFG, $DB;
 
+        // Todo: '$contentonly' used for generation testing and to sever the file
+        // by router or through a php file in the future.
         $urls = [];
 
         $baseurl = $CFG->wwwroot;
@@ -168,7 +173,6 @@ class generator {
 
         // Custom static pages and user defined urls.
         $custompages = get_config('theme_seo', 'custompages');
-        // Todo: to be added into settings.php.
         if (!empty($custompages)) {
             $pages = explode("\n", $custompages);
 
@@ -191,7 +195,7 @@ class generator {
                 $relativepath = utils::extract_url_path($url);
                 $file = "{$CFG->dirroot}{$relativepath}";
 
-                if (!utils::validate_link($url)) {
+                if (!@utils::validate_link($url)) {
                     // We should notify the admin about invalid link.
                     continue;
                 }
@@ -224,6 +228,43 @@ class generator {
             foreach ($pages as $page) {
                 $url    = new moodle_url('/local/pg/index.php/' . $page->shortname, ['page' => $page->id]);
                 $urls[] = $this->format_url($url, $page->timemodified);
+            }
+        }
+
+        $stored = [];
+        // Get pages from seo records.
+        $records = $DB->get_records('theme_seo');
+        foreach ($records as $record) {
+            $url = new moodle_url($record->page_path, json_decode($record->page_params, true));
+            $stored[$url->out(false)] = [
+                'url'          => $url,
+                'include'      => $record->insitemap,
+                'lastmodified' => $record->timemodified,
+            ];
+        }
+
+        // Exclude those that is already excluded by admin if already added.
+        $urls = array_filter($urls, function($data) use (&$stored) {
+            if (empty($data['loc'])) {
+                return false;
+            }
+            $url = new moodle_url($data['loc']);
+            foreach ($stored as $t => $info) {
+                if ($url->compare($info['url'])) {
+                    unset($stored[$t]);
+                    if (!$info['include']) {
+                        return false;
+                    }
+                    return true;
+                }
+            }
+            return true;
+        });
+
+        // Include the rest.
+        foreach ($stored as $url) {
+            if ($url['include']) {
+                $urls[] = $this->format_url($url['url'], $url['lastmodified']);
             }
         }
 

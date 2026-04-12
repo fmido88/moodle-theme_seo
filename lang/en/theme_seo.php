@@ -79,3 +79,13 @@ $string['uniqueexternallinks'] = 'Unique external links';
 $string['uniqueinternallinks'] = 'Unique internal links';
 $string['warnings'] = 'Warnings';
 $string['wordcount'] = 'Words count';
+$string['seotoggler'] = 'SEO Manager &#9650;';
+
+$string['insitemap'] = 'Include in sitemap';
+$string['schema_markup'] = 'Markup schema';
+$string['custompagessitemap'] = 'Custom pages in sitemap';
+$string['custompagessitemap_desc'] = 'Add local urls or relative urls (ex. \local\page\mycutompage.php?id=1) separated by new line.';
+$string['pageloadinginfo'] = 'Page loading information';
+$string['loadtime'] = 'Loading time';
+$string['pagesize'] = 'Loading size';
+$string['invalid'] = 'Invalid';

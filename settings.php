@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
+/*
  * Theme SEO block settings file
  *
  * @package    theme_seo
@@ -25,12 +25,14 @@
 // This line protects the file from being accessed by a URL directly.
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . "/locallib.php");
+require_once(__DIR__ . '/locallib.php');
+
 // This is used for performance, we don't need to know about these settings on every page in Moodle, only when
 // we are looking at the admin settings pages.
 if ($ADMIN->fulltree) {
     $themes = get_list_of_themes();
     $options = [];
+
     foreach ($themes as $theme => $object) {
         if ($theme == 'seo') {
             continue;
@@ -39,9 +41,25 @@ if ($ADMIN->fulltree) {
     }
 
     $settings = new admin_settingpage('themesettingseo', get_string('settings'));
-    $settings->add(new admin_setting_configselect('theme_seo/parent',
-                                                get_string('parenttheme', 'theme_seo'),
-                                                get_string('parenttheme_help', 'theme_seo'),
-                                                'boost',
-                                                $options));
+    $select =new admin_setting_configselect(
+        'theme_seo/parent',
+        get_string('parenttheme', 'theme_seo'),
+        get_string('parenttheme_help', 'theme_seo'),
+        'boost',
+        $options
+    );
+
+    $select->set_updatedcallback(function() {
+        purge_caches(['theme' => true, 'other' => true, 'template' => true]);
+    });
+
+    $settings->add($select);
+
+    $settings->add(new admin_setting_configtextarea(
+        'theme_seo/custompages',
+        get_string('custompagessitemap', 'theme_seo'),
+        get_string('custompagessitemap_desc', 'theme_seo'),
+        '',
+        PARAM_TEXT
+    ));
 }

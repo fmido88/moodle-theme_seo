@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
+/*
  * External functions and service declaration for SEO
  *
  * Documentation: {@link https://moodledev.io/docs/apis/subsystems/external/description}
@@ -26,6 +26,7 @@
  */
 
 use theme_seo\external\manager_footer;
+use theme_seo\external\validate_links;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -34,6 +35,12 @@ $functions = [
         'classname'    => manager_footer::class,
         'methodname'   => 'get_seo',
         'requirelogin' => false,
+        'ajax'         => true,
+    ],
+    'theme_seo_validate_link' => [
+        'classname'    => validate_links::class,
+        'methodname'   => 'validate_links',
+        'requirelogin' => true,
         'ajax'         => true,
     ],
 ];

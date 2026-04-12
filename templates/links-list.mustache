@@ -15,23 +15,17 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    @template theme_seo/seo-manager-placeholder
+    @template theme_seo/links-list
 
-    TODO describe template seo-manager-placeholder
+    TODO describe template links-list
 
     Example context (json):
     {
     }
 }}
-<div data-for="theme-seo-manager-place-holder" class="seo-manager-footer theme-seo-manager-container"{{!
-}}style="background: #e9ebe4;{{!
-    }}border-radius: 15px;{{!
-    }}padding: 15px;{{!
-    }}max-height: 60%;{{!
-    }}max-width: 100%;{{!
-    }}position: fixed;{{!
-    }}bottom: 0;{{!
-    }}right: 0;{{!
-    }}z-index: 5;">
-    {{> core/loading}}
-</div>
+{{#links}}
+    <li class="{{^valid}}text-danger{{/valid}}{{#valid}}text-success{{/valid}}">
+        <a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a>
+        {{^valid}}<b>({{#str}} invalid, theme_seo {{/str}})</b>{{/valid}}
+    </li>
+{{/links}}

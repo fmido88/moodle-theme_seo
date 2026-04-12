@@ -24,90 +24,88 @@
     }
 }}
 
-<div class="seo-manager-footer" style="background: #e9ebe4;{{!
-    }}border-radius: 15px;{{!
-    }}padding: 15px;{{!
-    }}max-height: 60%;{{!
-    }}max-width: 100%;{{!
-    }}position: fixed;{{!
-    }}bottom: 0;{{!
-    }}right: 0;{{!
-    }}z-index: 5;">
-    <button class="seo-manager-footer__toggle" style="position: absolute;{{!
-        }}top: 5px;{{!
-        }}right: 5px;{{!
-        }}background: none;{{!
-        }}border: none;{{!
-        }}cursor: pointer;">&#9650;</button>
-    <div class="seo-manager-footer__content" style="display:none;overflow-y: auto; max-height: 32rem;margin: 10px 0 0 0;">
-        <h4>{{#str}} seoinfo, theme_seo {{/str}}</h4>
-        {{#managable}}
-        <a href="{{managerurl}}">{{#str}} seomanage, theme_seo {{/str}}</a>
-        <br>
-        {{/managable}}
-        <dl class="seo-info">
-            <dt {{^public}}style="color: red;"{{/public}}>
-                {{#str}} public, theme_seo {{/str}}:
-            </dt>
-            <dd {{^public}}style="color: red;"{{/public}}>
-                {{#public}}{{#str}}yes{{/str}}{{/public}}
-                {{^public}}{{#str}}no{{/str}}{{/public}}
-            </dd>
+<button class="seo-manager-footer__toggle" style="padding: 0;{{!
+    }}width: 100%;{{!
+    }}text-align: end;{{!
+    }}background: none;{{!
+    }}border: none;{{!
+    }}cursor: pointer;">{{#str}}seotoggler, theme_seo{{/str}}</button>
+<div class="seo-manager-footer__content" style="display:none;overflow-y: auto; max-height: 32rem;margin: 10px 0 0 0;">
+    <h4>{{#str}} seoinfo, theme_seo {{/str}}</h4>
+    {{#managable}}
+    <div>{{{managerbutton}}}</div>
+    <br>
+    {{/managable}}
+    <dl class="seo-info">
+        <dt {{^public}}style="color: red;"{{/public}}>
+            {{#str}} public, theme_seo {{/str}}:
+        </dt>
+        <dd {{^public}}style="color: red;"{{/public}}>
+            {{#public}}{{#str}}yes{{/str}}{{/public}}
+            {{^public}}{{#str}}no{{/str}}{{/public}}
+        </dd>
 
-            <dt {{^indexable}}style="color:red;"{{/indexable}}>
-                {{#str}} indexable, theme_seo {{/str}}:
-            </dt>
-            <dd {{^indexable}}style="color:red;"{{/indexable}}>
-                {{#indexable}}{{#str}} yes{{/str}}{{/indexable}}
-                {{^indexable}}{{#str}}no{{/str}}{{/indexable}}
-            </dd>
+        <dt {{^indexable}}style="color:red;"{{/indexable}}>
+            {{#str}} indexable, theme_seo {{/str}}:
+        </dt>
+        <dd {{^indexable}}style="color:red;"{{/indexable}}>
+            {{#indexable}}{{#str}} yes{{/str}}{{/indexable}}
+            {{^indexable}}{{#str}}no{{/str}}{{/indexable}}
+        </dd>
 
-            <dt {{#redirected}}style="color:red;"{{/redirected}}>
-                {{#str}} redirected, theme_seo {{/str}}:
-            </dt>
-            <dd {{#redirected}}style="color:red;"{{/redirected}}>
-                {{#redirected}}{{#str}}yes{{/str}}{{/redirected}}
-                {{^redirected}}{{#str}}no{{/str}}{{/redirected}}
-            </dd>
+        <dt {{#redirected}}style="color:red;"{{/redirected}}>
+            {{#str}} redirected, theme_seo {{/str}}:
+        </dt>
+        <dd {{#redirected}}style="color:red;"{{/redirected}}>
+            {{#redirected}}{{#str}}yes{{/str}}{{/redirected}}
+            {{^redirected}}{{#str}}no{{/str}}{{/redirected}}
+        </dd>
 
-            <dt>
-                {{#redirected}}{{#str}} redirectionurl, theme_seo {{/str}}{{/redirected}}
-                {{^redirected}}{{#str}} pageurl, theme_seo{{/str}}{{/redirected}}:
-            </dt>
-            <dd>
-                <a href="{{{url}}}">{{url}}</a><br>
-                <a href="{{{previewurl}}}" target="_blank">{{#str}} guestpreviewpage, theme_seo {{/str}}</a>
-            </dd>
+        {{#load_info}}
+            <h6>{{#str}}pageloadinginfo, theme_seo{{/str}}</h6>
+            <ul>
+                <li><b>{{#str}} loadtime, theme_seo {{/str}}:</b> {{total_time}} {{#str}}seconds{{/str}}</li>
+                <li><b>{{#str}} pagesize, theme_seo {{/str}}:</b> {{size_download}} {{#str}}sizekb{{/str}}</li>
+            </ul>
+        {{/load_info}}
 
-            <dt>
-                {{#str}} context, theme_seo {{/str}}:
-            </dt>
-            <dd>
-                {{context}}
-            </dd>
-            <dt>
-                {{#str}} contextid, theme_seo {{/str}}:
-            </dt>
-            <dd>
-                {{contextid}}
-            </dd>
-            <dt>
-                {{#str}} contextname, theme_seo {{/str}}:
-            </dt>
-            <dd>
-                {{contextname}}
-            </dd>
-            <dt>
-                {{#str}} contextinstanceid, theme_seo {{/str}}:
-            </dt>
-            <dd>
-                {{instanceid}}
-            </dd>
-        </ul>
-        <div class="seo-info-details">
-            {{^crawlable}}
-                {{#str}} nothingtodisplay {{/str}}
-            {{/crawlable}}
-        </div>
+        <dt>
+            {{#redirected}}{{#str}} redirectionurl, theme_seo {{/str}}{{/redirected}}
+            {{^redirected}}{{#str}} pageurl, theme_seo{{/str}}{{/redirected}}:
+        </dt>
+        <dd>
+            <a href="{{{url}}}">{{url}}</a><br>
+            <a href="{{{previewurl}}}" target="_blank">{{#str}} guestpreviewpage, theme_seo {{/str}}</a>
+        </dd>
+
+        <dt>
+            {{#str}} context, theme_seo {{/str}}:
+        </dt>
+        <dd>
+            {{context}}
+        </dd>
+        <dt>
+            {{#str}} contextid, theme_seo {{/str}}:
+        </dt>
+        <dd>
+            {{contextid}}
+        </dd>
+        <dt>
+            {{#str}} contextname, theme_seo {{/str}}:
+        </dt>
+        <dd>
+            {{contextname}}
+        </dd>
+        <dt>
+            {{#str}} contextinstanceid, theme_seo {{/str}}:
+        </dt>
+        <dd>
+            {{instanceid}}
+        </dd>
+    </ul>
+    <div class="seo-info-details">
+        {{^crawlable}}
+            {{#str}} nothingtodisplay {{/str}}
+        {{/crawlable}}
     </div>
 </div>

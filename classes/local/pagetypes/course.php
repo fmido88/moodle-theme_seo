@@ -117,7 +117,8 @@ class course extends base {
             ];
         }
 
-        return $courseschema;
+        $this->schema = $courseschema;
+        return $this->schema;
     }
 
     #[\Override()]
@@ -125,12 +126,13 @@ class course extends base {
         $pageurlpath = $seo->get_page_url_path();
         $context = $seo->get_context();
 
-        $iscoursepage = \in_array($pageurlpath, ['/course/view.php', '/enrol/index.php'])
-                        || $context->contextlevel == CONTEXT_COURSE;
+        $iscoursepage = $context->contextlevel == CONTEXT_COURSE;
+
+        $isenrolpage = \in_array($pageurlpath, ['/enrol/index.php', '/enrol', '/enrol/']) && $context->contextlevel == CONTEXT_COURSECAT;
+        $iscoursepage = $iscoursepage || $isenrolpage;
 
         if ($iscoursepage && $context->contextlevel != CONTEXT_COURSE) {
             $id = $seo->get_url_params()['id'] ?? 0;
-
             if ($id) {
                 $seo->set_context(\context_course::instance($id));
             }

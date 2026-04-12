@@ -31,4 +31,7 @@ $definitions = [
     'seo' => [
         'mode' => cache_store::MODE_APPLICATION,
     ],
+    'validlinks' => [
+        'mode' => cache_store::MODE_SESSION,
+    ],
 ];

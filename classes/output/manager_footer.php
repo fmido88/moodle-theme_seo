@@ -64,8 +64,41 @@ class manager_footer implements renderable, templatable {
      * redirected: bool,
      * url: moodle_url}
      */
-    public function export_for_template(\renderer_base $output) {
-        $manageurl = new moodle_url('/theme/seo/manage.php', ['pageurl' => $this->seo->get_url()->out(false)]);
+    public function export_for_template(?\renderer_base $output = null) {
+        // Ensure load.
+        $this->seo->is_public_page();
+        $this->seo->pre_head_html();
+
+        $defaultschema = $this->seo->get_default_schema_markup();
+
+        $manparams = [
+            'pageurl' => $this->seo->get_url()->out(false),
+            'contextid' => $this->seo->get_context()->id,
+        ];
+
+        if (!empty($defaultschema)) {
+            $manparams['schema_markup'] = $defaultschema;
+        }
+
+        $manageurl = new moodle_url('/theme/seo/manage.php', $manparams);
+
+        /**
+         * @var core_renderer
+         */
+        $renderer = $this->seo->page->get_renderer('core');
+        $managebutton = $renderer->single_button($manageurl, get_string('seomanage', 'theme_seo'));
+
+        $loadinfo = null;
+        if (!empty($this->seo->curlinfo)) {
+            // We need 'total_time', 'size_download' for now.
+            $info = (array)$this->seo->curlinfo;
+            $loadinfo = [
+                'total_time'    => format_float($info['total_time'], 3),
+                'size_download' => format_float($info['size_download'] / 1024, 2),
+            ];
+        }
+        // var_dump($this->seo);
+        // die;
         $context = [
             'public'      => $this->seo->is_public_page(),
             'indexable'   => $this->seo->is_indexable(),
@@ -73,13 +106,14 @@ class manager_footer implements renderable, templatable {
             'managable'   => $this->seo->is_manageable(),
             'crawlable'   => $this->seo->is_crawler_allowed(),
             'url'         => $this->seo->get_url()->out(false),
-            'managerurl'  => $manageurl->out(false),
+            'managerbutton'  => $managebutton,
             'previewurl'  => $this->seo->get_preview_url()->out(false),
             'context'     => $this->seo->get_context()->get_level_name(),
             'contextname' => $this->seo->get_context()->get_context_name(),
             'content'     => $this->seo->get_content_as_guest(),
             'instanceid'  => $this->seo->get_context()->instanceid,
             'contextid'   => $this->seo->get_context()->id,
+            'load_info'   => $loadinfo,
         ];
 
         return $context;
@@ -91,19 +125,23 @@ class manager_footer implements renderable, templatable {
      */
     public static function export_external_parameters() {
         return new external_single_structure([
-            'public'      => new external_value(PARAM_BOOL),
-            'indexable'   => new external_value(PARAM_BOOL),
-            'redirected'  => new external_value(PARAM_BOOL),
-            'managable'   => new external_value(PARAM_BOOL),
-            'crawlable'   => new external_value(PARAM_BOOL),
-            'url'         => new external_value(PARAM_LOCALURL),
-            'managerurl'  => new external_value(PARAM_LOCALURL),
-            'previewurl'  => new external_value(PARAM_LOCALURL),
-            'context'     => new external_value(PARAM_TEXT),
-            'contextname' => new external_value(PARAM_TEXT),
-            'content'     => new external_value(PARAM_RAW),
-            'instanceid'  => new external_value(PARAM_INT),
-            'contextid'   => new external_value(PARAM_INT),
+            'public'        => new external_value(PARAM_BOOL),
+            'indexable'     => new external_value(PARAM_BOOL),
+            'redirected'    => new external_value(PARAM_BOOL),
+            'managable'     => new external_value(PARAM_BOOL),
+            'crawlable'     => new external_value(PARAM_BOOL),
+            'url'           => new external_value(PARAM_LOCALURL),
+            'managerbutton' => new external_value(PARAM_RAW),
+            'previewurl'    => new external_value(PARAM_LOCALURL),
+            'context'       => new external_value(PARAM_TEXT),
+            'contextname'   => new external_value(PARAM_TEXT),
+            'content'       => new external_value(PARAM_RAW),
+            'instanceid'    => new external_value(PARAM_INT),
+            'contextid'     => new external_value(PARAM_INT),
+            'load_info'     => new external_single_structure([
+                'total_time'    => new external_value(PARAM_FLOAT),
+                'size_download' => new external_value(PARAM_FLOAT),
+            ], allownull: NULL_ALLOWED)
         ], allownull: NULL_ALLOWED);
     }
 }

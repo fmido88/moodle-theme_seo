@@ -25,25 +25,11 @@
 import SeoCheck from "theme_seo/seord";
 import $ from "jquery";
 import Templates from "core/templates";
+import Ajax from 'core/ajax';
+import {exception} from 'core/notification';
 
-export const init = function(publicPage = true, redirected = false, publicContent = '', countrycode = null) {
+export const init = function(publicContent = '', countrycode = null) {
     $(async function() {
-        let toogelTimeout;
-
-        $('.seo-manager-footer__toggle').on('click', function() {
-            clearTimeout(toogelTimeout);
-            $('.seo-manager-footer__content').slideToggle();
-
-            toogelTimeout = setTimeout(() => {
-                let isVisible = $('.seo-manager-footer__content').is(':visible');
-                $(this).html(isVisible ? '&times;' : '&#9650;');
-            }, 500);
-        });
-
-        if (!publicPage || redirected) {
-            return;
-        }
-
         let keywords = document.querySelector("meta[name='keywords']")?.content || "";
         keywords = keywords.split(",").map((value) => value.trim());
 
@@ -65,10 +51,18 @@ export const init = function(publicPage = true, redirected = false, publicConten
         let result = await checker.analyzeSeo();
 
         // Log the SEO report for debugging only.
-        if (window.M.developerdebug) {
+        if (window.M.cfg.developerdebug) {
             // eslint-disable-next-line no-console
             console.log(contentJson, "SEO Analysis Report:", result);
         }
+        let promiseLinksValidation = [
+            fixLinks(result.internalLinks.unique),
+            fixLinks(result.internalLinks.duplicate),
+            fixLinks(result.outboundLinks.unique),
+            fixLinks(result.outboundLinks.duplicate),
+        ];
+
+        promiseLinksValidation = validateLinks(promiseLinksValidation);
 
         // Display the SEO report
         let context = {
@@ -93,17 +87,71 @@ export const init = function(publicPage = true, redirected = false, publicConten
             internallinkscount:          result.internalLinks.all.length,
             uniqueinternallinkscount:    result.internalLinks.unique.length,
             duplicateinternallinkscount: result.internalLinks.duplicate.length,
-            uniqueinternallinks:         result.internalLinks.unique,
-            duplicateinternallinks:      result.internalLinks.duplicate,
             externallinkscount:          result.outboundLinks.all.length,
             uniqueexternallinkscount:    result.outboundLinks.unique.length,
             duplicateexternallinkscount: result.outboundLinks.duplicate.length,
-            uniqueexternallinks:         result.outboundLinks.unique,
-            duplicateexternallinks:      result.outboundLinks.duplicate,
         };
 
         let html = await Templates.render("theme_seo/seo-info", context);
 
         $('.seo-info-details').html(html);
+
+        let linksLists = {
+            uniqueinternallinks:     promiseLinksValidation[0],
+            duplicateinternallinks:  promiseLinksValidation[1],
+            uniqueexternallinks:     promiseLinksValidation[2],
+            duplicateexternallinks:  promiseLinksValidation[3],
+        };
+        for (let key in linksLists) {
+            linksLists[key].then((list) => {
+                let context = {
+                    "links": list
+                };
+                return Templates.render("theme_seo/links-list", context);
+            }).then((html) => {
+                $('[data-placeholder="' + key + '"]').html(html);
+                return;
+            }).catch(exception);
+        }
     });
 };
+
+/**
+ * @param {Array<{text:String, href:String}>} links
+ */
+function fixLinks(links) {
+    links = links.map((link) => {
+        if (link.href.startsWith('#')) {
+            link.href = window.location.href + link.href;
+        }
+
+        link.text = link.text.trim();
+        if (!link.text) {
+            link.text = link.href;
+        }
+
+        return link;
+    });
+
+    return links;
+}
+/**
+ * @param {{text:String, href:String}[][]} links
+ */
+function validateLinks(links) {
+    return links.map((linksSet) => {
+        if (!linksSet.length) {
+            let promise = new Promise(function(resolve) {
+                resolve(linksSet);
+            });
+            return promise;
+        }
+
+        return Ajax.call([{
+            methodname: 'theme_seo_validate_link',
+            args: {
+                links: linksSet
+            }
+        }])[0];
+    });
+}

@@ -56,10 +56,12 @@ class profile extends base {
     }
     #[\Override()]
     public static function is_this_type(seo $seo): bool {
+        global $CFG;
         $context = $seo->get_context();
         $ismyprofile = ($context->contextlevel == CONTEXT_USER);
 
         if ($ismyprofile) {
+            require_once("{$CFG->dirroot}/user/lib.php");
             $profileuser = \core_user::get_user($context->instanceid);
 
             if (!$profileuser || !user_can_view_profile($profileuser, $seo->page->course ?? null, $context)) {

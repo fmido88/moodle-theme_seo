@@ -16,6 +16,7 @@
 
 namespace theme_seo;
 
+use core\xml_parser;
 use core_text;
 use core_useragent;
 use curl;
@@ -146,10 +147,12 @@ class utils {
         $homeurlpath = "/$homeurlpath";
 
         if (\strlen($homeurlpath) > 1) {
+            // Only get the relative url path.
             if (strpos($path, $homeurlpath) === 0) {
                 $path = substr($path, \strlen($homeurlpath));
-            } else {
-                debugging("The homepage path: $homeurlpath does not match the current page path $path", DEBUG_DEVELOPER);
+                if (empty($path)) {
+                    $path = "/"; // Only happen in home page.
+                }
             }
         }
 
@@ -221,5 +224,38 @@ class utils {
         global $CFG, $USER;
         $code = ($CFG->country ?? '') ?: ($USER->country ?? '');
         return $code ? core_text::strtolower($code) : null;
+    }
+
+    /**
+     * Read the content of the current sitemap.
+     * @return array<array>|null
+     */
+    public static function read_current_sitemap() {
+        static $urls;
+
+        if (isset($urls)) {
+            return $urls;
+        }
+
+        $file = generator::get_site_map_url(); // Read from url to ensure access.
+        $content = @file_get_contents($file);
+        if (empty($content)) {
+            return null;
+        }
+
+        $parsed = (new xml_parser())->parse($content);
+        $xmlurls = $parsed['urlset']['#']['url'] ?? null;
+
+        $urls = [];
+        $properties = ['loc', 'lastmod', 'changefreq', 'priority'];
+        foreach ($xmlurls as $url) {
+            $parsed = [];
+            foreach ($properties as $property) {
+                $parsed[$property] = reset($url['#'][$property])['#'];
+            }
+            $urls[] = $parsed;
+        }
+
+        return $urls;
     }
 }

@@ -38,10 +38,13 @@ if ($pageurl = optional_param('pageurl', null, PARAM_LOCALURL)) {
     $pageurl = utils::get_url_from_path($path, $paramsstring);
 }
 
-$url = new moodle_url('/theme/seo/manage.php', ['pageurl' => $pageurl->out(false)]);
+$contextid = required_param('contextid', PARAM_INT);
+$schemamarkup = optional_param('schema_markup', null, PARAM_TEXT);
+
+$url = new moodle_url('/theme/seo/manage.php', ['pageurl' => $pageurl->out(false), 'contextid' => $contextid]);
 
 $PAGE->set_url($url);
-$PAGE->set_context(context_system::instance());
+$PAGE->set_context(context::instance_by_id($contextid));
 
 $title = get_string('seomanage', 'theme_seo');
 $PAGE->set_heading($title);
@@ -49,7 +52,16 @@ $PAGE->set_title($title);
 
 $pagepath = utils::extract_url_path($pageurl);
 
-$form = new manager(null, ['pagepath' => $pagepath, 'pageparams' => json_encode($pageurl->params())]);
+$pageparams = $pageurl->params();
+core_collator::ksort($pageparams);
+
+$form = new manager(null, [
+    'pagepath'      => $pagepath,
+    'pageparams'    => json_encode($pageparams),
+    'contextid'     => $contextid,
+    'schema_markup' => $schemamarkup,
+]);
+
 if ($records = $DB->get_records('theme_seo', ['page_path' => $pagepath])) {
     foreach ($records as $record) {
         if (!empty($record->page_params)) {

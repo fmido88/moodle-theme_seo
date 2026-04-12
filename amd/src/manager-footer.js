@@ -25,6 +25,7 @@ import $ from 'jquery';
 import Template from 'core/templates';
 import {init as analyzerInit} from './analyze';
 import {exception} from 'core/notification';
+import {getString} from 'core/str';
 
 export const init = function(contextId = null, countrycode = null) {
     $(function() {
@@ -46,11 +47,61 @@ export const init = function(contextId = null, countrycode = null) {
         })
         .then((html, js) => {
             if (!returnData) {
+                return -1;
+            }
+
+            let placeHolder = $('div[data-for="theme-seo-manager-place-holder"]');
+
+            placeHolder.html(html);
+            Template.runTemplateJS(js);
+            return getString('seotoggler', 'theme_seo');
+        })
+        .then((togglerText) => {
+            if (togglerText === -1) {
                 return;
             }
-            $('div[data-for="theme-seo-manager-place-holder"]').append(html);
-            Template.runTemplateJS(js);
-            analyzerInit(returnData.public, returnData.redirected, returnData.content, countrycode);
+
+            let seoFooter = $('.seo-manager-footer');
+            let toggler = $('.seo-manager-footer__toggle');
+            let footerContent = $('.seo-manager-footer__content');
+            let toogelTimeout;
+
+            toggler.on('click', function(e) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                e.preventDefault();
+
+                clearTimeout(toogelTimeout);
+                footerContent.slideToggle();
+
+                toogelTimeout = setTimeout(() => {
+                    let isVisible = footerContent.is(':visible');
+                    if (isVisible) {
+                        footerContent.trigger('focus');
+                    }
+                    $(this).html(isVisible ? '&times;' : togglerText);
+                }, 500);
+            });
+
+            $(document).on('click', function(e) {
+
+                let $target = $(e.target);
+                if ($target.closest(seoFooter).length) {
+                    return;
+                }
+
+                clearTimeout(toogelTimeout);
+
+                footerContent.slideUp();
+                toogelTimeout = setTimeout(() => {
+                    toggler.html(togglerText);
+                }, 500);
+            });
+
+            if (returnData.public && !returnData.redirected) {
+                analyzerInit(returnData.content, countrycode);
+            }
+
             return;
         })
         .catch(exception);

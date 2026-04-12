@@ -70,40 +70,41 @@
     {{/minorwarnings}}
 </ul>
 <ul class="seo-info-links">
-    <li><b>{{#str}} totallinks, theme_seo {{/str}}: </b>{{totallinks}}</li>
+    <li>
+        <b>{{#str}} totallinks, theme_seo {{/str}}: </b>{{totallinks}}
+    </li>
     <h6>{{#str}} internalLinks, theme_seo {{/str}}</h6>
     <ul>
-        <li><b>{{#str}} internallinks, theme_seo {{/str}}: </b>{{internallinkscount}}</li>
+        <li>
+            <b>{{#str}} internallinks, theme_seo {{/str}}: </b>{{internallinkscount}}
+        </li>
         <li><b>{{#str}} uniqueinternallinks, theme_seo {{/str}}: </b>{{uniqueinternallinkscount}}
-            <ul>
-                {{#uniqueinternallinks}}
-                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
-                {{/uniqueinternallinks}}
+            <ul data-placeholder="uniqueinternallinks">
+                {{> core/loading}}
             </ul>
         </li>
-        <li><b>{{#str}}duplicateinternallinks, theme_seo {{/str}}: </b>{{duplicateinternallinkscount}}
-            <ul>
-                {{#duplicateinternallinks}}
-                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
-                {{/duplicateinternallinks}}
+        <li>
+            <b>{{#str}}duplicateinternallinks, theme_seo {{/str}}: </b>{{duplicateinternallinkscount}}
+            <ul data-placeholder="duplicateinternallinks">
+                {{> core/loading}}
             </ul>
         </li>
     </ul>
     <h6>{{#str}} externalLinks, theme_seo {{/str}}</h6>
     <ul>
-        <li><b>{{#str}} externallinks, theme_seo {{/str}}: </b>{{externallinkscount}}</li>
-        <li><b>{{#str}} uniqueexternallinks, theme_seo {{/str}}: </b>{{uniqueexternallinkscount}}
-            <ul>
-                {{#uniqueexternallinks}}
-                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
-                {{/uniqueexternallinks}}
+        <li>
+            <b>{{#str}} externallinks, theme_seo {{/str}}: </b>{{externallinkscount}}
+        </li>
+        <li>
+            <b>{{#str}} uniqueexternallinks, theme_seo {{/str}}: </b>{{uniqueexternallinkscount}}
+            <ul data-placeholder="uniqueexternallinks">
+                {{> core/loading}}
             </ul>
         </li>
-        <li><b>{{#str}} duplicateexternallinks, theme_seo {{/str}}: </b>{{duplicateexternallinkscount}}
-            <ul>
-                {{#duplicateexternallinks}}
-                <li><a href="{{href}}">{{#text}}{{.}}{{/text}}{{^text}}{{href}}{{/text}}</a></li>
-                {{/duplicateexternallinks}}
+        <li>
+            <b>{{#str}} duplicateexternallinks, theme_seo {{/str}}: </b>{{duplicateexternallinkscount}}
+            <ul data-placeholder="duplicateexternallinks">
+                {{> core/loading}}
             </ul>
         </li>
     </ul>
