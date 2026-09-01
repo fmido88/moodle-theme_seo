@@ -49,6 +49,7 @@ function theme_seo_get_parent_theme() {
         }
     }
 
+    // Fallback to boost.
     return 'boost';
 }
 
@@ -80,7 +81,7 @@ function theme_seo_get_parent_theme_core_renderer(string $parenttheme): ?string 
     ];
 
     foreach ($possibleclasses as $class) {
-        if (class_exists($class)) {
+        if (class_exists($class) && is_subclass_of($class, \core\output\core_renderer::class)) {
             return $class;
         }
     }

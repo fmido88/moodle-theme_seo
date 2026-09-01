@@ -30,11 +30,10 @@ require_once($CFG->dirroot . "/theme/seo/locallib.php");
 $parenttheme = theme_seo_get_parent_theme();
 
 $parent = theme_config::load($parenttheme);
-
-$THEME->parents = $parent->parents ?? [];
+$THEME = clone $parent;
+$THEME->parents ??= [];
 if (!in_array($parenttheme, $THEME->parents)) {
-    $THEME->parents = array_unique(array_merge([$parenttheme], $THEME->parents));
+    $THEME->parents = array_unique([$parenttheme, ...$THEME->parents]);
 }
 
 $THEME->name = 'seo';
-$THEME->rendererfactory = 'theme_overridden_renderer_factory';

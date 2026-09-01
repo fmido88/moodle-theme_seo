@@ -66,7 +66,7 @@ if (!class_exists(__NAMESPACE__ . '\\theme_seo_parent_core_renderer')) {
     /**
      * {@inheritDoc}
      */
-    class theme_seo_parent_core_renderer extends boost_renderer {
+    class theme_seo_parent_core_renderer extends \core\output\core_renderer {
     }
 }
 
@@ -79,8 +79,6 @@ class core_renderer extends theme_seo_parent_core_renderer {
      * @var seo
      */
     public seo $seo;
-
-    public static $callinc = 0;
 
     /**
      * Get the seo helper class.
@@ -105,11 +103,12 @@ class core_renderer extends theme_seo_parent_core_renderer {
     public function standard_head_html() {
         $output = parent::standard_head_html();
 
-        // Remove the keywords meta tag to add it again.
+        // Remove the keywords, description and robots meta tag to add them again.
         $keywordsregex = '/<meta\s+name\s*=\s*"\s*keywords\s*"\s*content\s*=\s*"([^"]*)"\s*\/?>/i';
         $descriptionregex = '/<meta\s+name\s*=\s*"description"\s*content\s*=\s*"([^"]*)"\s*\/?>/i';
         $robotsregex = '/<meta\s+name\s*=\s*"robots"\s*content\s*=\s*"([^"]*)"\s*\/?>/i';
 
+        // Extract original description and keywords.
         $origkeywords = $origdesc = '';
         if (preg_match($descriptionregex, $output, $matches)) {
             $origdesc = $matches[1] ?? '';
@@ -142,10 +141,12 @@ class core_renderer extends theme_seo_parent_core_renderer {
             return parent::footer();
         }
 
-        $this->page->requires->js_call_amd('theme_seo/manager-footer', 'init', [
-            'contextId'   => $this->get_seo()->get_context()->id,
-            'countrycode' => utils::get_country(),
-        ]);
+        if (isloggedin() && !isguestuser()) {
+            $this->page->requires->js_call_amd('theme_seo/manager-footer', 'init', [
+                'contextId'   => $this->get_seo()->get_context()->id,
+                'countrycode' => utils::get_country(),
+            ]);
+        }
 
         if (!is_siteadmin()) {
             return parent::footer();
