@@ -77,11 +77,13 @@ class validate_links extends external_api {
             $key->set_anchor(null);
             $key = $key->out(false);
 
-            if ($valid = $cache->get($key)) {
-                self::$validated[$key] = $valid;
-            } else if (!isset(self::$validated[$key])) {
-                self::$validated[$key] = utils::validate_link($url);
-                $cache->set($key, self::$validated[$key]);
+            if (!isset(self::$validated[$key]))  {
+                if ($valid = $cache->get($key)) {
+                    self::$validated[$key] = $valid;
+                } else {
+                    self::$validated[$key] = utils::validate_link($url);
+                    $cache->set($key, self::$validated[$key]);
+                }
             }
 
             $links[$i]['valid'] = self::$validated[$key];
