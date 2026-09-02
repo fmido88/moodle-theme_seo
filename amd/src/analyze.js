@@ -122,7 +122,9 @@ export const init = function(publicContent = '', countrycode = null) {
 function fixLinks(links) {
     links = links.map((link) => {
         if (link.href.startsWith('#')) {
-            link.href = window.location.href + link.href;
+            let url = new URL(window.location.href);
+            url.hash = link.href;
+            link.href = url.toString();
         }
 
         link.text = link.text.trim();
