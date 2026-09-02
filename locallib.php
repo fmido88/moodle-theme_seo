@@ -50,7 +50,7 @@ function theme_seo_get_parent_theme() {
     }
 
     // Fallback to boost.
-    return 'boost';
+    return $themes['boost'] ?? $themes['classic'] ?? reset($themes);
 }
 
 /**
